@@ -1,0 +1,129 @@
+TCGA MultiOmics Data Analysis
+========================================================
+author: Pablo Riesgo (priesgo@uoc.edu) 
+date: 08/11/2015
+
+The dataset
+========================================================
+### Retrieval
+- TCGA normalized level 3 datasets for RNASeq and RPPA
+- For tumor types breast cancer and ovary cancer
+
+```{r, eval=FALSE}
+library("RTCGAToolbox")
+firehose_datasets = getFirehoseDatasets()
+firehose_dates= getFirehoseRunningDates()
+BRCA.dataset = getFirehoseData (dataset="BRCA", runDate=firehose_dates[1], RNAseq2_Gene_Norm = TRUE, RPPA=TRUE)
+OV.dataset = getFirehoseData (dataset="OV", runDate=firehose_dates[1], RNAseq2_Gene_Norm = TRUE, RPPA=TRUE)
+```
+
+The dataset
+========================================================
+### Preprocessing
+- Removed samples not having data for RNASeq and RPPA
+- Removed variables for genes not matching with HGNC gene names
+- Removed RPPA variables for antibodies matching the same gene, only the antibody with the maximum absolute average expression was conserved
+- Scaling
+- Removed variables with zero or near zero variance
+- Removed variables with missing values
+- Removed variables with correlation over 0.7
+
+
+The dataset
+========================================================
+### Samples
+407 BRCA + 201 ovary cancer samples
+![Samples barplot](../results/samples.barplot.png)
+***
+### Variables
+12880 gene expression + 55 protein expression variables are far too many to plot...
+
+
+Principal component Analysis
+========================================================
+
+### Gene expression
+![Samples barplot](../results/PCA.X.png)
+***
+### Protein expression
+![Samples barplot](../results/PCA.Y.png)
+
+
+Principal component Analysis
+========================================================
+Joint analysis
+![Samples barplot](../results/PCA.XY.png)
+***
+
+
+Hierarchical clustering
+========================================================
+
+### Gene expression
+![Samples barplot](../results/hclust.X.png)
+***
+### Protein expression
+![Samples barplot](../results/hclust.Y.png)
+
+
+Hierarchical clustering
+========================================================
+Joint analysis
+![Samples barplot](../results/hclust.XY.png)
+***
+
+
+Multiple Co-Inertia Analysis (MCIA)
+========================================================
+> The 2 first PCs explain 34.05% and 11.55% of the variance
+
+![Samples barplot](../results/MCIA/visualizations.png)
+
+***
+> Labeled items are the top 100 variables
+
+![Samples barplot](../results/MCIA/topN.variables.png)
+
+
+
+
+sparse Least Square Regression (sPLS)
+========================================================
+Samples
+![Samples barplot](../results/sPLS/samples.png)
+***
+Variables
+![Samples barplot](../results/sPLS/variables.png)
+
+
+sparse Least Square Regression (sPLS)
+========================================================
+Heatmap
+![Samples barplot](../results/sPLS/heatmap.png)
+***
+Network
+![Samples barplot](../results/sPLS/network.png)
+
+
+
+Results
+========================================================
+> Matches between MCIA and sPLS top 100 and known oncogenes and tumor supressor genes
+
+![Samples barplot](../results/venn.png)
+
+***
+> Matches between MCIA and sPLS enriched pathways in Reactome
+
+![Samples barplot](../results/venn_pathways.png)
+
+
+Other methods to study
+========================================================
+* Canonical Correlation Analysis
+  + Regularized Generalized CCA (error with dataset)
+  + Regularized CCA (long computation)
+  + CCA with Elastic Net (did not found implementation)
+* Procrustes (pending)
+
+

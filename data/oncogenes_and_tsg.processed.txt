@@ -1,0 +1,126 @@
+Gene Symbol	Gene Name	# Mutated Tumor Samples**	Oncogene score*	Tumor Suppressor Gene score*	Classification*	Core pathway	Process
+ABL1	c-abl oncogene 1, receptor tyrosine kinase	851	93.00 %	0.00 %	Oncogene	Cell Cycle/Apoptosis	Cell Survival
+ACVR1B	activin A receptor, type IB	17	0.00 %	42.00 %	TSG	TGF-b 	Cell Survival
+AKT1	v-akt murine thymoma viral oncogene homolog 1	155	93.00 %	1.00 %	Oncogene	PI3K	Cell Survival
+ALK	anaplastic lymphoma receptor tyrosine kinase	189	72.00 %	1.00 %	Oncogene	PI3K; RAS	Cell Survival
+APC	adenomatous polyposis coli	2561	2.00 %	92.00 %	TSG	APC	Cell Fate
+AR	androgen receptor	23	54.00 %	0.00 %	Oncogene	Transcriptional Regulation	Cell Fate
+ARID1A	AT rich interactive domain 1A (SWI-like)	234	1.00 %	83.00 %	TSG	Chromatin Modification	Cell Fate
+ARID1B	AT rich interactive domain 1B (SWI1-like)	17	0.00 %	50.00 %	TSG	Chromatin Modification	Cell Fate
+ARID2	AT rich interactive domain 2 (ARID, RFX-like)	45	0.00 %	56.00 %	TSG	Chromatin Modification	Cell Fate
+ASXL1	additional sex combs like 1 (Drosophila)	442	5.00 %	87.00 %	TSG	Chromatin Modification	Cell Fate
+ATM	similar to Serine-protein kinase ATM (Ataxia telangiectasia mutated) (A-T, mutated); ataxia telangiectasia mutated	242	24.00 %	30.00 %	TSG	DNA Damage Control	Genome Maintenance
+ATRX	alpha thalassemia/mental retardation syndrome X-linked (RAD54 homolog, S. cerevisiae)	50	4.00 %	47.00 %	TSG	Chromatin Modification	Cell Fate
+AXIN1	axin 1	117	20.00 %	27.00 %	TSG	APC	Cell Fate
+B2M	beta-2-microglobulin	30	18.00 %	39.00 %	TSG	PI3K; RAS; MAPK	Cell Survival
+BAP1	BRCA1 associated protein-1 (ubiquitin carboxy-terminal hydrolase)	99	8.00 %	70.00 %	TSG	DNA Damage Control	Genome Maintenance
+BCL2	B-cell CLL/lymphoma 2	45	27.00 %	1.00 %	Oncogene	Cell Cycle/Apoptosis	Cell Survival
+BCOR	BCL6 co-repressor	21	0.00 %	70.00 %	TSG	Transcriptional Regulation	Cell Fate
+BRAF	v-raf murine sarcoma viral oncogene homolog B1	24288	100.00 %	0.00 %	Oncogene	RAS	Cell Survival
+BRCA1	breast cancer 1, early onset	62	0.00 %	69.00 %	TSG	DNA Damage Control	Genome Maintenance
+BRCA2	breast cancer 2, early onset	67	0.00 %	30.00 %	TSG	DNA Damage Control	Genome Maintenance
+CARD11	caspase recruitment domain family, member 11	74	30.00 %	1.00 %	Oncogene	Cell Cycle/Apoptosis	Cell Survival
+CASP8	caspase 8, apoptosis-related cysteine peptidase	21	0.00 %	52.00 %	TSG	Cell Cycle/Apoptosis	Cell Survival
+CBL	Cas-Br-M (murine) ecotropic retroviral transforming sequence	168	57.00 %	9.00 %	Oncogene	PI3K; RAS	Cell Survival
+CDC73	cell division cycle 73, Paf1/RNA polymerase II complex component, homolog (S. cerevisiae)	45	4.00 %	78.00 %	TSG	Cell Cycle/Apoptosis	Cell Survival
+CDH1	cadherin 1, type 1, E-cadherin (epithelial)	200	14.00 %	52.00 %	TSG	APC	Cell Fate
+CDKN2A	cyclin-dependent kinase inhibitor 2A (melanoma, p16, inhibits CDK4)	968	32.00 %	49.00 %	TSG	Cell Cycle/Apoptosis	Cell Survival
+CEBPA	CCAAT/enhancer binding protein (C/EBP), alpha	448	30.00 %	54.00 %	TSG	PI3K; RAS; MAPK	Cell Survival
+CIC	capicua homolog (Drosophila)	47	12.00 %	31.00 %	TSG	RAS	Cell Survival
+CREBBP	CREB binding protein	151	24.00 %	34.00 %	TSG	Chromatin Modification; Transcriptional Regulation	Cell Fate
+CRLF2	cytokine receptor-like factor 2	10	100.00 %	0.00 %	Oncogene	STAT	Cell Survival
+CSF1R	colony stimulating factor 1 receptor	48	50.00 %	15.00 %	Oncogene	PI3K; RAS	Cell Survival
+CTNNB1	catenin (cadherin-associated protein), beta 1, 88kDa	3262	92.00 %	1.00 %	Oncogene	APC	Cell Fate
+CYLD	cylindromatosis (turban tumor syndrome)	26	0.00 %	85.00 %	TSG	Cell Cycle/Apoptosis	Cell Survival
+DAXX	death-domain associated protein	28	7.00 %	61.00 %	TSG	Chromatin Modification; Cell Cycle/Apoptosis	Cell Fate
+DNMT1	DNA (cytosine-5-)-methyltransferase 1	22	36.00 %	5.00 %	Oncogene	Chromatin Modification	Cell Fate
+DNMT3A	DNA (cytosine-5-)-methyltransferase 3 alpha	788	74.00 %	12.00 %	Oncogene	Chromatin Modification	Cell Fate
+EGFR	epidermal growth factor receptor (erythroblastic leukemia viral (v-erb-b) oncogene homolog, avian)	10628	97.00 %	0.00 %	Oncogene	PI3K; RAS	Cell Survival
+EP300	E1A binding protein p300	88	12.00 %	32.00 %	TSG	Chromatin Modification; APC; TGF-b; NOTCH	Cell Survival/Fate
+ERBB2	v-erb-b2 erythroblastic leukemia viral oncogene homolog 2, neuro/glioblastoma derived oncogene homolog (avian)	164	67.00 %	3.00 %	Oncogene	PI3K; RAS	Cell Survival
+EZH2	enhancer of zeste homolog 2 (Drosophila)	276	67.00 %	12.00 %	Oncogene	Chromatin Modification	Cell Fate
+FAM123B	family with sequence similarity 123B	55	4.00 %	66.00 %	TSG	APC	Cell Fate
+FBXW7	F-box and WD repeat domain containing 7	312	55.00 %	18.00 %	TSG	NOTCH	Cell Fate
+FGFR2	fibroblast growth factor receptor 2	121	49.00 %	6.00 %	Oncogene	PI3K; RAS ; STAT	Cell Survival
+FGFR3	fibroblast growth factor receptor 3	2948	99.00 %	0.00 %	Oncogene	PI3K; RAS ; STAT	Cell Survival
+FLT3	fms-related tyrosine kinase 3	11520	98.00 %	0.00 %	Oncogene	RAS; PI3K; STAT	Cell Survival
+FOXL2	forkhead box L2	330	100.00 %	0.00 %	Oncogene	TGF-b 	Cell Fate
+FUBP1	far upstream element (FUSE) binding protein 1	9	0.00 %	70.00 %	TSG	Cell Cycle/Apoptosis	Cell Survival
+GATA1	GATA binding protein 1 (globin transcription factor 1)	203	8.00 %	84.00 %	TSG	NOTCH, TGF-b 	Cell Fate
+GATA2	GATA binding protein 2	45	53.00 %	4.00 %	Oncogene	NOTCH, TGF-b 	Cell Fate
+GATA3	GATA binding protein 3	33	9.00 %	66.00 %	TSG	Transcriptional Regulation	Cell Fate
+GNA11	guanine nucleotide binding protein (G protein), alpha 11 (Gq class)	110	92.00 %	1.00 %	Oncogene	PI3K; RAS; MAPK	Cell Survival
+GNAQ	guanine nucleotide binding protein (G protein), q polypeptide	245	95.00 %	1.00 %	Oncogene	PI3K;RAS; MAPK	Cell Survival
+GNAS	GNAS complex locus	422	93.00 %	2.00 %	Oncogene	APC; PI3K; TGF-b, RAS	Cell Survival/Cell Fate
+H3F3A	H3 histone, family 3B (H3.3B); H3 histone, family 3A pseudogene; H3 histone, family 3A; similar to H3 histone, family 3B; similar to histone H3.3B	122	93.00 %	0.00 %	Oncogene	Chromatin Modification	Cell Fate
+HIST1H3B	histone cluster 1, H3j; histone cluster 1, H3i; histone cluster 1, H3h; histone cluster 1, H3g; histone cluster 1, H3f; histone cluster 1, H3e; histone cluster 1, H3d; histone cluster 1, H3c; histone cluster 1, H3b; histone cluster 1, H3a; histone cluster 1, H2ad; histone cluster 2, H3a; histone cluster 2, H3c; histone cluster 2, H3d	25	60.00 %	0.00 %	Oncogene	Chromatin Modification	Cell Fate
+HNF1A	HNF1 homeobox A	126	29.00 %	55.00 %	TSG	APC	Cell Fate
+HRAS	v-Ha-ras Harvey rat sarcoma viral oncogene homolog	812	96.00 %	0.00 %	Oncogene	RAS	Cell Survival
+IDH1	isocitrate dehydrogenase 1 (NADP+), soluble	4509	100.00 %	0.00 %	Oncogene	Chromatin Modification	Cell Fate
+IDH2	isocitrate dehydrogenase 2 (NADP+), mitochondrial	1029	99.00 %	0.00 %	Oncogene	Chromatin Modification	Cell Fate
+JAK1	Janus kinase 1	61	26.00 %	18.00 %	Oncogene	STAT	Cell Survival
+JAK2	Janus kinase 2	32692	100.00 %	0.00 %	Oncogene	STAT	Cell Survival
+JAK3	Janus kinase 3	89	60.00 %	6.00 %	Oncogene	STAT	Cell Survival
+KDM5C	lysine (K)-specific demethylase 5C	26	0.00 %	62.00 %	TSG	Chromatin Modification	Cell Fate
+KDM6A	lysine (K)-specific demethylase 6A	66	0.00 %	72.00 %	TSG	Chromatin Modification	Cell Fate
+KIT	similar to Mast/stem cell growth factor receptor precursor (SCFR) (Proto-oncogene tyrosine-protein kinase Kit) (c-kit) (CD117 antigen); v-kit Hardy-Zuckerman 4 feline sarcoma viral oncogene homolog	4720	90.00 %	0.00 %	Oncogene	PI3K; RAS; STAT	Cell Survival
+KLF4	Kruppel-like factor 4	61	80.00 %	4.00 %	Oncogene	Transcriptional Regulation; WNT	Cell Fate
+KRAS	v-Ki-ras2 Kirsten rat sarcoma viral oncogene homolog	23261	100.00 %	0.00 %	Oncogene	RAS	Cell Survival
+MAP2K1	mitogen-activated protein kinase kinase 1	13	67.00 %	0.00 %	Oncogene	RAS	Cell Survival
+MAP3K1	mitogen-activated protein kinase kinase kinase 1	11	0.00 %	63.00 %	TSG	RAS; MAPK	Cell Survival
+MED12	mediator complex subunit 12	337	84.00 %	0.00 %	Oncogene	Cell Cycle/Apoptosis; TGF-b 	Cell Survival
+MEN1	multiple endocrine neoplasia I	290	7.00 %	68.00 %	TSG	Chromatin Modification	Cell Fate
+MET	met proto-oncogene (hepatocyte growth factor receptor)	159	61.00 %	4.00 %	Oncogene	PI3K; RAS	Cell Survival
+MLH1	mutL homolog 1, colon cancer, nonpolyposis type 2 (E. coli)	61	18.00 %	37.00 %	TSG	DNA Damage Control	Genome Maintenance
+MLL2	myeloid/lymphoid or mixed-lineage leukemia 2	165	1.00 %	70.00 %	TSG	Chromatin Modification	Cell Fate
+MLL3	myeloid/lymphoid or mixed-lineage leukemia 3	111	5.00 %	44.00 %	TSG	Chromatin Modification	Cell Fate
+MPL	myeloproliferative leukemia virus oncogene	531	96.00 %	0.00 %	Oncogene	STAT	Cell SUrvival
+MSH2	mutS homolog 2, colon cancer, nonpolyposis type 1 (E. coli)	37	0.00 %	65.00 %	TSG	DNA Damage Control	Genome Maintenance
+MSH6	mutS homolog 6 (E. coli)	135	3.00 %	68.00 %	TSG	DNA Damage Control	Genome Maintenance
+MYD88	myeloid differentiation primary response gene (88)	134	92.00 %	1.00 %	Oncogene	Cell Cycle/Apoptosis	Cell Survival
+NCOR1	nuclear receptor co-repressor 1	35	11.00 %	32.00 %	TSG	Chromatin Modification	Cell Fate
+NF1	neurofibromin 1	362	2.00 %	73.00 %	TSG	RAS	Cell Survival
+NF2	neurofibromin 2 (merlin)	609	4.00 %	89.00 %	TSG	APC	Cell Fate
+NFE2L2	nuclear factor (erythroid-derived 2)-like 2	102	74.00 %	1.00 %	Oncogene	Cell Cycle/Apoptosis	Cell Survival
+NOTCH1	Notch homolog 1, translocation-associated (Drosophila)	661	44.00 %	27.00 %	TSG	NOTCH	Cell Fate
+NOTCH2	Notch homolog 2 (Drosophila)	51	0.00 %	27.00 %	TSG	NOTCH	Cell Fate
+NPM1	nucleophosmin 1 (nucleolar phosphoprotein B23, numatrin) pseudogene 21; hypothetical LOC100131044; similar to nucleophosmin 1; nucleophosmin (nucleolar phosphoprotein B23, numatrin)	2471	2.00 %	98.00 %	TSG	Cell Cycle/Apoptosis	Cell Survival
+NRAS	neuroblastoma RAS viral (v-ras) oncogene homolog	2738	99.00 %	0.00 %	Oncogene	RAS	Cell Survival
+PAX5	paired box 5	49	42.00 %	26.00 %	TSG	Chromatin Modification	Cell Fate
+PBRM1	polybromo 1	171	0.00 %	83.00 %	TSG	Chromatin Modification	Cell Fate
+PDGFRA	platelet-derived growth factor receptor, alpha polypeptide	653	84.00 %	1.00 %	Oncogene	PI3K; RAS	Cell Survival
+PHF6	PHD finger protein 6	57	18.00 %	61.00 %	TSG	Transcriptional Regulation	Cell Fate
+PIK3CA	phosphoinositide-3-kinase, catalytic, alpha polypeptide	4560	95.00 %	1.00 %	Oncogene	PI3K	Cell Survival
+PIK3R1	phosphoinositide-3-kinase, regulatory subunit 1 (alpha)	88	14.00 %	37.00 %	TSG	PI3K	Cell Survival
+PPP2R1A	protein phosphatase 2 (formerly 2A), regulatory subunit A, alpha isoform	86	85.00 %	2.00 %	Oncogene	Cell Cycle/Apoptosis	Cell Survival
+PRDM1	PR domain containing 1, with ZNF domain	46	0.00 %	64.00 %	TSG	Chromatin Modification	Cell Fate
+PTCH1	patched homolog 1 (Drosophila)	318	7.00 %	60.00 %	TSG	HH	Cell Fate
+PTEN	phosphatase and tensin homolog; phosphatase and tensin homolog pseudogene 1	1719	30.00 %	55.00 %	TSG	PI3K	Cell Survival
+PTPN11	protein tyrosine phosphatase, non-receptor type 11; similar to protein tyrosine phosphatase, non-receptor type 11	410	90.00 %	0.00 %	Oncogene	RAS	Cell Survival
+RB1	retinoblastoma 1	208	4.00 %	80.00 %	TSG	Cell Cycle/Apoptosis	Cell Survival
+RET	ret proto-oncogene	500	86.00 %	1.00 %	Oncogene	RAS; PI3K 	Cell Survival
+RNF43	ring finger protein 43	27	7.00 %	43.00 %	TSG	APC	Cell Fate
+RUNX1	runt-related transcription factor 1	304	34.00 %	41.00 %	TSG	Transcriptional Regulation	Cell Fate
+SETD2	SET domain containing 2	47	3.00 %	47.00 %	TSG	Chromatin Modification	Cell Fate
+SETBP1	SET binding protein 1	95	25.00 %	4.00 %	Oncogene	Chromatin Modification; Replication	Cell Fate
+SF3B1	splicing factor 3b, subunit 1, 155kDa	516	91.00 %	0.00 %	Oncogene	Transcriptional Regulation	Cell Fate
+SMAD2	SMAD family member 2	16	0.00 %	41.00 %	TSG	TGF-b 	Cell Survival
+SMAD4	SMAD family member 4	207	24.00 %	39.00 %	TSG	TGF-b 	Cell Survival
+SMARCA4	SWI/SNF related, matrix associated, actin dependent regulator of chromatin, subfamily a, member 4	68	22.00 %	22.00 %	TSG	Chromatin Modification	Cell Fate
+SMARCB1	SWI/SNF related, matrix associated, actin dependent regulator of chromatin, subfamily b, member 1	247	16.00 %	74.00 %	TSG	Chromatin Modification	Cell Fate
+SMO	smoothened homolog (Drosophila)	34	51.00 %	3.00 %	Oncogene	HH	Cell Fate
+SOCS1	suppressor of cytokine signaling 1	41	15.00 %	46.00 %	TSG	STAT	Cell Survival
+SOX9	SRY (sex determining region Y)-box 9	9	0.00 %	70.00 %	TSG	APC	Cell Survival
+SPOP	speckle-type POZ protein	35	66.00 %	3.00 %	Oncogene	Chromatin Modification; HH	Cell Fate
+SRSF2	SRSF2 serine/arginine-rich splicing factor 2	273	95.00 %	2.00 %	Oncogene	Transcriptional Regulation	Cell Fate
+STAG2	stromal antigen 2	21	0.00 %	33.00 %	TSG	DNA Damage Control	Genome Maintenance
+STK11	serine/threonine kinase 11	220	24.00 %	52.00 %	TSG	mTOR	Cell Survival
+TET2	tet oncogene family member 2	864	14.00 %	70.00 %	TSG	Chromatin Modification	Cell Fate
+TNFAIP3	tumor necrosis factor, alpha-induced protein 3	136	1.00 %	80.00 %	TSG	Cell Cycle/Apoptosis; MAPK	Cell Survival
+TRAF7	TNF receptor-associated factor 7	123	61.00 %	9.00 %	TSG	Apoptosis	Cell Survival
+TP53	tumor protein p53	14438	73.00 %	20.00 %	TSG	Cell Cycle/Apoptosis; DNA Damage Control	Cell Survival
+TSC1	tuberous sclerosis 1	20	0.00 %	45.00 %	TSG	PI3K	Cell SUrvival
+TSHR	thyroid stimulating hormone receptor	301	86.00 %	0.00 %	Oncogene	PI3K; MAPK	Cell Survival
+U2AF1	U2 small nuclear RNA auxiliary factor 1	96	92.00 %	1.00 %	Oncogene	Transcriptional Regulation	Cell Fate
+VHL	von Hippel-Lindau tumor suppressor	1287	27.00 %	60.00 %	TSG	PI3K; RAS; STAT	Cell Survival
+WT1	Wilms tumor 1	312	10.00 %	79.00 %	TSG	Chromatin Modification	Cell Fate
