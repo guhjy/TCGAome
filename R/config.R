@@ -1,40 +1,14 @@
-library(futile.logger)
-
-#!/usr/bin/env Rscript
-main <- function(){
-  initial.options <- commandArgs(trailingOnly = FALSE)
-  file.arg.name <- "--file="
-  script.name <- sub(file.arg.name, "", initial.options[grep(file.arg.name, initial.options)])
-  script.basename <- dirname(script.name)
-  # to load from RStudio
-  # script.basename = getwd()
-
-  # Loads all code in this folder
-  #for (nm in list.files(script.basename, pattern = "\\.[RrSsQq]$")) {
-  for (nm in list.files("./R/", pattern = "\\.[RrSsQq]$")) {
-    if (nm != "main.r"){
-      source(file.path("./R", nm))
-    }
-  }
 
 
-  # Sets logging
-  flog.threshold(DEBUG)
-  flog.appender(appender.file("../logs/log"), name="log")
-
-  # Runs the pipeline
-  #pipeline(c("BRCA", "OV"))
-}
-
-
+# Configures loggers to be used
 configure_logging <- function(folder){
   flog.threshold(DEBUG)
-  flog.appender(appender.file(paste(folder,"TCGAome.log", sep="/")), name="log")
+  flog.appender(appender.tee(paste(folder,"TCGAome.log", sep="/")))
 }
 
 
 get_package_folder <- function(relative_path){
-  paste(system.file(package = "TCGAome"), relative_path, sep="/")
+  paste(gsub("\\\\", "/", base::system.file(package = "TCGAome")), relative_path, sep="/")
 }
 
 get_results_folder <- function()
@@ -47,7 +21,7 @@ get_results_folder <- function()
 }
 
 # Bioconductor packages are not loaded by import statements, so this functions loads them explicitly.
-loads_bioc_packages <- function()
+loads_dependencies <- function()
 {
   library(ReactomePA)
   library(RTCGAToolbox)
@@ -58,6 +32,19 @@ loads_bioc_packages <- function()
   library(ontoCAT)
   library(topGO)
   library(GOSemSim)
+  library(treemap)
+  library(gridExtra)
+  library(ggplot2)
+  library(scales)
+  library(grid)
+  library(VennDiagram)
+  library(ggbiplot)
+  library(gplots)
+  library(Cairo)
+  library(reshape)
+  library(cluster)
+  library(dplyr)
+  library(futile.logger)
 }
 
 

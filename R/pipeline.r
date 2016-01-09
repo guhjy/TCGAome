@@ -751,7 +751,7 @@ plot_venn <- function(set1, set2, set3, labels){
 run.TCGAome <- function(tumor_types){
 
   # Loads bioconductor packages
-  loads_bioc_packages()
+  loads_dependencies()
 
   # Creates and sets the results folder for the current run
   RESULTS_FOLDER <<- get_results_folder()
