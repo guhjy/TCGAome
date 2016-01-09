@@ -7,251 +7,9 @@
 #library(VennDiagram)
 
 
-# COlors to use in plots
-red500 = rgb(as.integer(as.hexmode("f4")), as.integer(as.hexmode("43")), as.integer(as.hexmode("36")), maxColorValue=255)
-green500 = rgb(as.integer(as.hexmode("4c")), as.integer(as.hexmode("af")), as.integer(as.hexmode("50")), maxColorValue=255)
-indigo500 = rgb(as.integer(as.hexmode("3f")), as.integer(as.hexmode("51")), as.integer(as.hexmode("b5")), maxColorValue=255)
-amber500 = rgb(as.integer(as.hexmode("ff")), as.integer(as.hexmode("c1")), as.integer(as.hexmode("07")), maxColorValue=255)
-yellow500 = rgb(as.integer(as.hexmode("ff")), as.integer(as.hexmode("eb")), as.integer(as.hexmode("3b")), maxColorValue=255)
-purple500 = rgb(as.integer(as.hexmode("67")), as.integer(as.hexmode("3a")), as.integer(as.hexmode("b7")), maxColorValue=255)
-grey500 = rgb(as.integer(as.hexmode("9e")), as.integer(as.hexmode("9e")), as.integer(as.hexmode("b9")), maxColorValue=255)
-brown500 = rgb(as.integer(as.hexmode("79")), as.integer(as.hexmode("55")), as.integer(as.hexmode("48")), maxColorValue=255)
-cyan500 = rgb(as.integer(as.hexmode("00")), as.integer(as.hexmode("bc")), as.integer(as.hexmode("d4")), maxColorValue=255)
-lime500 = rgb(as.integer(as.hexmode("cd")), as.integer(as.hexmode("dc")), as.integer(as.hexmode("39")), maxColorValue=255)
-black = rgb(as.integer(as.hexmode("00")), as.integer(as.hexmode("00")), as.integer(as.hexmode("00")), maxColorValue=255)
 
 
 
-
-###
-## Dataset descriptive analysis
-###
-descriptive.analysis <- function(X, Y, Z){
-  output_dir = paste(RESULTS_FOLDER, "descriptive_analysis", sep="/")
-  dir.create(output_dir)
-
-  plot_samples_barplot(Z, output_dir=output_dir, file_name="samples.barplot.png")
-}
-
-
-###
-## Principal Component Analysis
-###
-pca.analysis <- function(X, Y, Z){
-
-  output_dir = paste(RESULTS_FOLDER, "PCA", sep="/")
-  dir.create(output_dir)
-
-  # PCA on the protein expression
-  Y.pca <- prcomp(Y, center = TRUE, scale. = TRUE)
-  plot_simple_scatter(matrix=Y.pca, groups=Z$Tumor_type, output_dir=output_dir, file_name="PCA.Y.png")
-
-  # PCA on the gene expression
-  X.pca <- prcomp(X,
-                  center = TRUE,
-                  scale. = TRUE)
-  plot_simple_scatter(matrix=X.pca, groups=Z$Tumor_type, output_dir=output_dir, file_name="PCA.X.png")
-
-  # Joint PCA
-  colnames(X) = paste(colnames(X), ".X")
-  colnames(Y) = paste(colnames(Y), ".Y")
-  XY.pca <- prcomp(cbind2(X,Y),
-                   center = TRUE,
-                   scale. = TRUE)
-  plot_simple_scatter(matrix=XY.pca, groups=Z$Tumor_type, output_dir=output_dir, file_name="PCA.XY.png")
-}
-
-###
-## Hierarchical clustering
-###
-hclust.analysis <- function(X, Y, Z){
-
-  output_dir = paste(RESULTS_FOLDER, "hclust", sep="/")
-  dir.create(output_dir)
-
-  col.tumor.type = Z$Tumor_type
-  col.tumor.type[col.tumor.type == "BRCA"] <- red500
-  col.tumor.type[col.tumor.type == "OV"] <- green500
-
-  colnames(X) = paste(colnames(X), ".X")
-  colnames(Y) = paste(colnames(Y), ".Y")
-
-  # Plots heatmaps
-  plot_heatmap(matrix=as.matrix(X), colors=col.tumor.type, output_dir=output_dir, file_name="hclust.X.png")
-  plot_heatmap(matrix=as.matrix(Y), colors=col.tumor.type, output_dir=output_dir, file_name="hclust.Y.png")
-  plot_heatmap(matrix=as.matrix(cbind2(X,Y)), colors=col.tumor.type, output_dir=output_dir, file_name="hclust.XY.png")
-}
-
-###
-### Regularized Canonical COrrelation Analysis (rCCA)
-###
-rcaa.analysis <- function(X, Y, Z)
-{
-
-  output_dir = paste(RESULTS_FOLDER, "rCCA", sep="/")
-  dir.create(output_dir)
-
-  # Calculates regularization factors with CV (M-folds and leave-one-out methods raise an error)
-  # Error in chol.default(Cxx) :
-  # the leading minor of order 407 is not positive definite
-  #grid1 <- seq(0, 0.2, length = 51)
-  #grid2 <- seq(0.0001, 0.2, length = 51)
-  cv_score <- tune.rcc(X, Y)  #, grid1 = grid1, grid2 = grid2, plt = FALSE) #, validation = 'loo')
-  # Computes rCCA
-  rcca_results <- rcc(X, Y, lambda1=cv_score$opt.lambda1, lambda2=cv_score$opt.lambda2)
-
-  # plots the individuals
-  col.tumor.type = Z$Tumor_type
-  col.tumor.type[col.tumor.type == "BRCA"] <- red500
-  col.tumor.type[col.tumor.type == "OV"] <- green500
-  mixomics_plot_individuals(data=rcca_results, names=Z$race, colors=col.tumor.type, output_dir=output_dir, file_name="samples.png")
-
-  # plots the variables
-  mixomics_plot_variables(rcca_results, output_dir=output_dir, file_name="variables.png")
-
-  # network of relations between variables
-  #network(rcca_results, comp = 1:2, threshold = 0.2)
-
-  # heatmap
-  #cim(rcca_results, comp = 1:2, xlab = "proteins", ylab = "genes", margins = c(5,6))
-
-  # return
-  rcca_results
-}
-
-###
-## Regularized Generalized CCA
-###
-rgcca.analysis <- function (X, Y, Z)
-{
-
-  rgcca.results = rgcca(list(X, Y), tau = 'optimal', ncomp = 3)
-
-  # return
-  rgcca.results
-}
-
-
-###
-### Sparse Partial Least Squares (sPLS)
-###
-spls.analysis <- function(X, Y, Z, topN=10)
-{
-
-  output_dir = paste(RESULTS_FOLDER, "mcia", sep="/")
-  dir.create(output_dir)
-
-  # adds a suffix to gene names to differentiate the dataset of origin, we'll have to remove for posterior analysis
-  colnames(X) = paste(colnames(X), ".X", sep="")
-  colnames(Y) = paste(colnames(Y), ".Y", sep="")
-
-  #spls_result <- spls(as.matrix(X), as.matrix(Y), ncomp = 3, mode = 'regression', keepX=c(50, 50, 50), keepY=c(50, 50, 50))
-  spls_result <- spls(as.matrix(X), as.matrix(Y), ncomp = 3, mode = 'regression')
-
-  col.tumor.type = Z$Tumor_type
-  col.tumor.type[col.tumor.type == "BRCA"] <- red500
-  col.tumor.type[col.tumor.type == "OV"] <- green500
-
-  # plots the individuals
-  mixomics_plot_individuals(data=spls_result, names=Z$Tumor_type, colors=col.tumor.type, output_dir=output_dir, file_name="samples.png")
-  # plots the variables
-  mixomics_plot_variables(spls_result, output_dir=output_dir, file_name="variables.png")
-  # plots variables in a network
-  mixomics_plot_network(spls_result, output_dir=output_dir, file_name="network.png")
-  # plots heatmap
-  mixomics_plot_heatmap(spls_result, output_dir=output_dir, file_name="heatmap.png")
-
-  # Select variables
-  selected_variables = mixOmics::selectVar(spls_result, comp=3)
-  rownames(selected_variables$value.X) = gsub("\\.X", "", rownames(selected_variables$value.X))
-  rownames(selected_variables$value.Y) = gsub("\\.Y", "", rownames(selected_variables$value.Y))
-  selected_variables$value.X$name.X = rownames(selected_variables$value.X)
-  selected_variables$value.Y$name.Y = rownames(selected_variables$value.Y)
-
-
-  positive.X = selected_variables$value.X[selected_variables$value.X$value.var.X >=0, ]
-  b = dim(positive.X)[1]
-  a = b - topN + 1
-  positive.X.top = positive.X[a:b , ]
-  negative.X = selected_variables$value.X[selected_variables$value.X$value.var.X <0, ]
-  b = dim(negative.X)[1]
-  a = b - topN + 1
-  negative.X.top = negative.X[a:b , ]
-  positive.Y = selected_variables$value.Y[selected_variables$value.Y$value.var.Y >=0, ]
-  b = dim(positive.Y)[1]
-  a = b - topN + 1
-  positive.Y.top = positive.Y[a:b , ]
-  negative.Y = selected_variables$value.Y[selected_variables$value.Y$value.var.Y <0, ]
-  b = dim(negative.Y)[1]
-  a = b - topN + 1
-  negative.Y.top = negative.Y[a:b , ]
-
-  selected_variables_names = c(positive.X.top$name.X, negative.X.top$name.X, positive.Y.top$name.Y, negative.Y.top$name.Y)
-  selected_genes = c(positive.X.top$name.X, negative.X.top$name.X)
-  selected_proteins = c(positive.Y.top$name.Y, negative.Y.top$name.Y)
-
-  # return
-  list(results=spls_result, selected_variables=selected_variables_names, selected_genes=selected_genes, selected_proteins=selected_proteins)
-}
-
-###
-### Co-Inertia Analysis
-###
-mcia.analysis <- function(X, Y, Z, topN=5, cia.nf=5)
-{
-
-  output_dir = paste(RESULTS_FOLDER, "mcia", sep="/")
-  dir.create(output_dir)
-
-  col.histological.type = as.numeric(Z$histological_type)
-  col.histological.type[col.histological.type == 1] <- red500
-  col.histological.type[col.histological.type == 2] <- green500
-  col.histological.type[col.histological.type == 3] <- indigo500
-  col.histological.type[col.histological.type == 4] <- amber500
-  col.histological.type[col.histological.type == 5] <- yellow500
-  col.histological.type[col.histological.type == 6] <- purple500
-
-  col.disease.stage = as.numeric(Z$neoplasm_diseasestage)
-  col.disease.stage[col.disease.stage == 1] <- red500
-  col.disease.stage[col.disease.stage == 2] <- green500
-  col.disease.stage[col.disease.stage == 3] <- indigo500
-  col.disease.stage[col.disease.stage == 4] <- amber500
-  col.disease.stage[col.disease.stage == 5] <- yellow500
-  col.disease.stage[col.disease.stage == 6] <- purple500
-  col.disease.stage[col.disease.stage == 7] <- brown500
-  col.disease.stage[col.disease.stage == 8] <- cyan500
-  col.disease.stage[col.disease.stage == 9] <- lime500
-  col.disease.stage[col.disease.stage == 10] <- black
-  col.disease.stage[is.na(col.disease.stage)] <- grey500
-
-
-  #matrices_list = list(t(X.tsg.subset), t(Y))
-  #matrices_list = list(t(X), t(Y), t(Z))
-  matrices_list = list(as.matrix(t(X)), as.matrix(t(Y)))
-  sapply(matrices_list, dim)
-  all(apply((x <- sapply(matrices_list, colnames)), 2, function(y)identical(y, x[,1])))
-
-  # Multiple Co-Inertia Analysis
-  mcia_result <- mcia(matrices_list, nsc=F, cia.nf = cia.nf)
-
-  # PLot all results
-  mcia_plot(mcia_result, phenotype=Z$Tumor_type, output_dir=output_dir, file_name="visualizations.png")
-
-  # Selects top 5 positive and negative associations and plots them, that is 20 variables
-  mcia_selected_variables = topVar(mcia_result, topN = topN)
-  mcia_selected_genes = gsub("\\.df1", "", as.character(unlist(mcia_selected_variables[, 1:2])))
-  mcia_selected_proteins = gsub("\\.df2", "", as.character(unlist(mcia_selected_variables[, 3:4])))
-  write.table(mcia_selected_variables, paste(output_dir, "top_variables.txt", sep="/"), quote = FALSE, sep = "\t", row.names = FALSE)
-  mcia_selected_variables = as.character(unlist(mcia_selected_variables))
-
-  # Plots selected variables
-  mcia_plot_variables(mcia_result, mcia_selected_variables, output_dir=output_dir, file_name="topN.variables.png")
-
-  # Removes the suffix that identifies a variable as gene or protein
-  mcia_selected_variables = gsub("\\.df.", "", mcia_selected_variables)
-
-  list(results=mcia_result, selected_variables=mcia_selected_variables, selected_genes=mcia_selected_genes, selected_proteins=mcia_selected_proteins)
-}
 
 
 ###
@@ -743,12 +501,22 @@ plot_venn <- function(set1, set2, set3, labels){
 
 
 #' Runs the TCGAome analysis pipeline on the given tumor types.
-#' @param Vector of tumor types to be analyzed from those available at TCGA (run RTCGAToolbox::getFirehoseDatasets() to see all available types)
+#' @param tumor_types Vector of tumor types to be analyzed from those available at TCGA (run RTCGAToolbox::getFirehoseDatasets() to see all available types)
+#' @param run_pca_analysis Flag indicating if the PCA should run, this is part of the data pre-analysis (default: TRUE)
+#' @param run_hclust_analysis Flag indicating if the hierarchical clustering analysis should run, this is part of the data pre-analysis (default: FALSE)
+#' @param run_rgcca Flag indicating if the Regularized Generalized Canonical Correlation Analysis (RGCCA) should run (default: FALSE). Beware that this analysis is not intended for datasets with number of variables >> number of samples.
+#' @param run_rcca Flag indicating if the Regularized Canonical Correlation Analysis (rCCA) should run (default: FALSE). Beware that this analysis is not intended for datasets with number of variables >> number of samples.
+#'
 #' @keywords TCGAome
 #' @export
 #' @examples
 #' run.TCGAome(c("BRCA", "OV"))
-run.TCGAome <- function(tumor_types){
+run.TCGAome <- function(tumor_types,
+                        run_pca_analysis=TRUE,
+                        run_hclust_analysis=FALSE,
+                        run_rgcca=FALSE,
+                        run_rcca=FALSE
+                        ){
 
   # Loads bioconductor packages
   loads_dependencies()
@@ -763,6 +531,7 @@ run.TCGAome <- function(tumor_types){
 
   # Downloads data for RNAseq and RPPA
   #matrices = get.data(c("BRCA", "OV"))
+  # tumor_types = c("BRCA", "OV")
   matrices = get.data(tumor_types)
 
   # Preprocessing
@@ -770,8 +539,18 @@ run.TCGAome <- function(tumor_types){
 
   # Pre-analysis
   descriptive.analysis(X=preprocessed.matrices$X, Y=preprocessed.matrices$Y, Z=matrices$Z)
-  pca.analysis(X=preprocessed.matrices$X, Y=preprocessed.matrices$Y, Z=matrices$Z)
-  hclust.analysis(X=preprocessed.matrices$X, Y=preprocessed.matrices$Y, Z=matrices$Z)
+
+  if (run_pca_analysis){
+    pca.analysis(X=preprocessed.matrices$X, Y=preprocessed.matrices$Y, Z=matrices$Z)
+  } else {
+    flog.info("Principal Component Analysis disabled.")
+  }
+
+  if (run_hclust_analysis){
+    hclust.analysis(X=preprocessed.matrices$X, Y=preprocessed.matrices$Y, Z=matrices$Z)
+  } else {
+    flog.info("Hierarchichal clustering analysis disabled.")
+  }
 
   # Runs MCIA
   mcia.results = mcia.analysis(X=preprocessed.matrices$X, Y=preprocessed.matrices$Y, Z=matrices$Z, topN=10, cia.nf=5)
@@ -782,11 +561,20 @@ run.TCGAome <- function(tumor_types){
   spls.results = spls.analysis(X=preprocessed.matrices$X, Y=preprocessed.matrices$Y, Z=matrices$Z)
 
   # Runs RGCCA
-  rgcca.results = rgcca.analysis(X=preprocessed.matrices$X, Y=preprocessed.matrices$Y, Z=matrices$Z)
+  if (run_rgcca){
+    library(RGCCA)
+    rgcca.results = rgcca.analysis(X=preprocessed.matrices$X, Y=preprocessed.matrices$Y, Z=matrices$Z)
+  } else {
+    flog.info("Regularized Generalized Canonical Correlation Analysis disabled.")
+  }
 
   # Runs rCCA
   #preprocessed.matrices = preprocess.data(matrices$X, matrices$Y, correlation.thr = 0.5)
-  rcaa.results = rcaa.analysis(preprocessed.matrices$X, preprocessed.matrices$Y, Z=matrices$Z)
+  if (run_rcca){
+    rcaa.results = rcaa.analysis(preprocessed.matrices$X, preprocessed.matrices$Y, Z=matrices$Z)
+  } else {
+    flog.info("Regularized Canonical Correlation Analysis disabled.")
+  }
 
   # Evaluates results
   results.evaluation(mcia.results = mcia.results, spls.results = spls.results)
