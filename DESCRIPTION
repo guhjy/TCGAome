@@ -8,6 +8,30 @@ Description: The package downloads RNAseq, RPPA and clinical TCGA datasets
     semantic and functional distances between terms.
 Depends:
     R (>= 3.2.3)
-License: GPL
+Imports:
+    futile.logger,
+    ReactomePA,
+    RTCGAToolbox,
+    mixOmics,
+    omicade4,
+    reshape,
+    biomaRt,
+    topGO,
+    GOSemSim,
+    cluster,
+    ontoCAT,
+    biomaRt,
+    treemap,
+    gridExtra,
+    ggplot2,
+    scales,
+    grid,
+    VennDiagram,
+    ggbiplot,
+    gplots,
+    Cairo,
+    dplyr,
+    RGCCA
+License: MIT
 LazyData: true
 RoxygenNote: 5.0.1.9000

@@ -7,61 +7,61 @@ get.data <- function (tumor_types)
   firehose_datasets = getFirehoseDatasets()
   #firehose_dates= getFirehoseRunningDates()
   FIREHOSE_DATE = "20150402"  # we fix it so data is consistent during development
-  FIREHOSE_DIR <<- get_package_folder("data/firehose")
-  
+  FIREHOSE_DIR <<- get_package_folder("inst/firehose")
+
   datasets = list()     # whole datasets
   matrices = list()
   X = NULL
   Y = NULL
   Z = NULL
-  
+
   tumor_types = c("BRCA", "OV")
-  
+
   for (tumor_type in tumor_types)
   {
     flog.info("Download data for %s", tumor_type)
     # downloads the data
     datasets[[tumor_type]] = getFirehoseData (dataset=tumor_type, runDate=FIREHOSE_DATE, RNAseq2_Gene_Norm = TRUE, RPPA=TRUE, destdir=FIREHOSE_DIR)
-    
+
     flog.info("Loading data for %s", tumor_type)
     # gets data matrices
     matrices[[tumor_type]]$X = datasets[[tumor_type]]@RNASeq2GeneNorm
     matrices[[tumor_type]]$Y = datasets[[tumor_type]]@RPPAArray[[1]]@DataMatrix
     matrices[[tumor_type]]$Z = as.data.frame(datasets[[tumor_type]]@Clinical)
     if (grepl("-.-(V|C|NA)$",rownames(matrices[[tumor_type]]$Y))){
-      rownames(matrices[[tumor_type]]$Y) = gsub("-.-(V|C|NA)$", "", rownames(matrices[[tumor_type]]$Y))  # antobodies names include a suffix for OV dataset...  
+      rownames(matrices[[tumor_type]]$Y) = gsub("-.-(V|C|NA)$", "", rownames(matrices[[tumor_type]]$Y))  # antobodies names include a suffix for OV dataset...
     }
-    
+
     # Normalize sample ids
     matrices[[tumor_type]] = normalize_sample_identifiers(matrices[[tumor_type]]$X,
                                             matrices[[tumor_type]]$Y,
                                             matrices[[tumor_type]]$Z)
-    
+
     flog.info("No. of %s cancer samples: %s", tumor_type, dim(matrices[[tumor_type]]$X)[2])
     flog.info("No. of %s cancer features for RNAseq: %s", tumor_type, dim(matrices[[tumor_type]]$X)[1])
     flog.info("No. of %s cancer features for RPPA: %s", tumor_type, dim(matrices[[tumor_type]]$Y)[1])
     flog.info("No. of %s cancer features for clinical data: %s", tumor_type, dim(matrices[[tumor_type]]$Z)[2])
     #matrices[[tumor_type]]$Z = matrices[[tumor_type]]$Z
-    
+
     matrices[[tumor_type]] = get_RPPA_annotations(tumor_type, matrices[[tumor_type]])
-    
+
     # adds the tumor type in the clinical data matrix
     matrices[[tumor_type]]$Z = cbind(matrices[[tumor_type]]$Z, Tumor_type=c(tumor_type))
-    
+
     # unlists matrices of each data type for later processing
     if (is.null(X)){
       X = matrices[[tumor_type]]$X
-    } else { 
+    } else {
       shared_features = intersect(rownames(X), rownames(matrices[[tumor_type]]$X))
-      X = cbind2(X[rownames(X) %in% shared_features, ], 
-                 matrices[[tumor_type]]$X[rownames(matrices[[tumor_type]]$X) %in% shared_features, ])  
+      X = cbind2(X[rownames(X) %in% shared_features, ],
+                 matrices[[tumor_type]]$X[rownames(matrices[[tumor_type]]$X) %in% shared_features, ])
     }
     if (is.null(Y)){
       Y = matrices[[tumor_type]]$Y
-    } else { 
+    } else {
       shared_features = intersect(rownames(Y), rownames(matrices[[tumor_type]]$Y))
-      Y = cbind2(Y[rownames(Y) %in% shared_features, ], 
-                 matrices[[tumor_type]]$Y[rownames(matrices[[tumor_type]]$Y) %in% shared_features, ])  
+      Y = cbind2(Y[rownames(Y) %in% shared_features, ],
+                 matrices[[tumor_type]]$Y[rownames(matrices[[tumor_type]]$Y) %in% shared_features, ])
     }
     if (is.null(Z)){
       Z = matrices[[tumor_type]]$Z
@@ -71,31 +71,31 @@ get.data <- function (tumor_types)
       Z = rbind2(Z, matrices[[tumor_type]]$Z)
     }
   }
-  
+
   # 18147 gene expression variables + 133 protein expression variables for 407 samples
   flog.info("Total number of features for RNAseq: %s", dim(X)[1])
   flog.info("Total number of features for RPPA: %s", dim(Y)[1])
   flog.info("Total number of features for clinical data: %s", dim(Z)[2])
   flog.info("Total number of samples: %s", dim(X)[2])
-  
+
   # Transposes
   X = t(X)
   Y = t(Y)
-  
+
   # Sorts matrices by sample
   X <- X[order(rownames(X)),]
   Y <- Y[order(rownames(Y)),]
   Z <- Z[order(rownames(Z)),]
-  
+
   # Writes input matrices
   write.table(X, file=paste(RESULTS_FOLDER, "X_rnaseqnorm.txt", sep="/"), quote = F, sep = "\t", na = "")
   write.table(Y, file=paste(RESULTS_FOLDER, "Y_rppa.txt", sep="/"), quote = F, sep = "\t", na = "")
   write.table(Z, file=paste(RESULTS_FOLDER, "Z_clinical.txt", sep="/"), quote = F, sep = "\t", na = "")
-  
+
   flog.info("Finished downloading TCGA data.")
-  
+
   # returns matrices
-  list(X=X, Y=Y, Z=Z) 
+  list(X=X, Y=Y, Z=Z)
 }
 
 RPPA_ANNOTATIONS = list(
@@ -105,36 +105,36 @@ RPPA_ANNOTATIONS = list(
 
 # Downloads annotations of RPPA antibodies for a given tumor type
 get_RPPA_annotations <- function(tumor_type, matrices){
-  
+
   flog.info("Loading RPPA annotations for %s", tumor_type)
-  
+
   #RPPA.annotations.URL.template = "http://gdac.broadinstitute.org/runs/stddata__2015_08_21/data/%TUMOR_TYPE%/20150821/gdac.broadinstitute.org_%TUMOR_TYPE%.RPPA_AnnotateWithGene.Level_3.2015082100.1.0.tar.gz"
   #RPPA.annotations.URL.template_2 = "http://gdac.broadinstitute.org/runs/stddata__2015_08_21/data/%TUMOR_TYPE%/20150821/gdac.broadinstitute.org_%TUMOR_TYPE%.RPPA_AnnotateWithGene.Level_3.2015082100.0.0.tar.gz"
   RPPA.annotations.file.template = paste(FIREHOSE_DIR, "%TUMOR_FOLDER%/%TUMOR_TYPE%.antibody_annotation.txt", sep="/")
-  
+
   # Downloads the annotations if necessary
   RPPA.annotations.URL = RPPA_ANNOTATIONS[[tumor_type]]
   RPPA.annotations.file = paste(FIREHOSE_DIR, basename(RPPA.annotations.URL), sep="/")
   if (!file.exists(RPPA.annotations.file)){
     download.file(RPPA.annotations.URL, RPPA.annotations.file)
   }
-  
+
   # Uncompressing annotations
   if (file.exists(RPPA.annotations.file)){
     untar(RPPA.annotations.file, exdir = FIREHOSE_DIR)
-    output_matrices = normalize_variable_names(matrices$X, matrices$Y, matrices$Z, 
-                                               gsub("%TUMOR_FOLDER%", 
-                                                    gsub(".tar.gz", "", 
-                                                         basename(RPPA.annotations.file)), 
-                                                    gsub("%TUMOR_TYPE%", 
+    output_matrices = normalize_variable_names(matrices$X, matrices$Y, matrices$Z,
+                                               gsub("%TUMOR_FOLDER%",
+                                                    gsub(".tar.gz", "",
+                                                         basename(RPPA.annotations.file)),
+                                                    gsub("%TUMOR_TYPE%",
                                                          tumor_type, RPPA.annotations.file.template)))
   } else {
     # Annotations not found where expected
     flog.error("Cannot find RPPA annotations for tumor type %s.", tumor_type)
   }
-  
+
   flog.info("Finished loading RPPA annotations.")
-  
+
   output_matrices
 }
 
@@ -142,11 +142,11 @@ get_RPPA_annotations <- function(tumor_type, matrices){
 normalize_sample_identifiers <- function (X, Y, Z)
 {
   flog.info("Normalizing sample identifiers...")
-  
+
   # gets samples
   gene_expression_samples = colnames(X)
   protein_expression_samples = colnames(Y)
-  
+
   # Normalizes sample identifiers for X and Y
   # See https://wiki.nci.nih.gov/display/TCGA/TCGA+Barcode for details on sample identifiers
   # Check https://tcga-data.nci.nih.gov/datareports/codeTablesReport.htm?codeTable=Sample%20type to identify tumor and normal samples
@@ -155,23 +155,23 @@ normalize_sample_identifiers <- function (X, Y, Z)
   colnames(Y) = protein_expression_samples_processed
   gene_expression_samples_processed = unlist(lapply(gene_expression_samples, substr, start=1, stop=16))
   colnames(X) = gene_expression_samples_processed
-  
+
   # Normalizes sample identifiers for clinical data (identifiers are of the type "TCGA-MS-A51U", they don't contain the part related with the tissue)
   row.names(Z) = gsub("\\.", "-", toupper(row.names(Z)))
-  
+
   # Gets common samples (407 samples having gene expression and protein expression)
   common_samples = intersect(protein_expression_samples_processed, gene_expression_samples_processed)
-  
+
   # Get samples subset based on histology type
-  
-  
+
+
   # Removes samples not being common from both data types
   X = subset(X, select= common_samples)
   Y = subset(Y, select= common_samples)
-  
+
   # TODO: Remove repetitions for the same individual (there are none in this dataset as we have no controls for protein expression)
   # common_samples = uniq(substr(common_samples, 1, 12))
-  
+
   # Normalizes sample identifiers with clinical data
   # Gets only the part of the sample identifier corresponding to individual so we can match to clinical data ("TCGA-MS-A51U")
   colnames(X)  = substr(colnames(X), 1, 12)
@@ -179,7 +179,7 @@ normalize_sample_identifiers <- function (X, Y, Z)
   Z_t = subset(t(Z), select= intersect(colnames(Y), rownames(Z)))
   Z = as.data.frame(t(Z_t))
   rownames(Z)  = substr(rownames(Z), 1, 12)
-  
+
   #return
   list(X=X, Y=Y, Z=Z)
 }
@@ -187,23 +187,23 @@ normalize_sample_identifiers <- function (X, Y, Z)
 # Normalizes variables into HGNC symbols
 normalize_variable_names <- function(X, Y, Z, antibody.annotation)
 {
-  
+
   flog.info("Normalizing feature names...")
-  
+
   # Normalizes gene identifiers using Ensembl BioMart for Homo sapiens
   # Removes genes from X not having a correct HUGO identifier
   hgnc_symbols = query_biomart(attributes=c("hgnc_symbol"), filters=c("hgnc_symbol"), values=rownames(X))[, 1]
   X = X[ rownames(X) %in% hgnc_symbols, ]
-  
+
   # Normalizes RPPA antibody identifiers with Firehose annotation to gene (we use BRCA annotations as they are subset of OV)
   # Some antibodies map to several genes -> we will keep only the first in the list
-  # Some genes are mapped by several antibodies -> we will keep only the one with the highest average expression 
+  # Some genes are mapped by several antibodies -> we will keep only the one with the highest average expression
   antibody.annotation = read.csv(antibody.annotation, sep="\t")
   # remove more than one gene to the same antibody
   antibody.annotation$Gene.Name.processed =  gsub(" .*", "", antibody.annotation$Gene.Name)
   antibodies = intersect(rownames(Y), antibody.annotation$Composite.Element.REF)
   Y = Y[ rownames(Y) %in% antibodies, ]
-  
+
   # remove more than one antibody to the same gene, we keep that one with the greatest average expression
   antibody.annotation = antibody.annotation[antibody.annotation$Composite.Element.REF %in% antibodies, ]
   antibody.annotation$max.avg.exp = apply(Y[rownames(Y) %in% antibodies, ], MARGIN = 1, FUN = function(x){abs(mean(x))})
@@ -211,12 +211,12 @@ normalize_variable_names <- function(X, Y, Z, antibody.annotation)
   antibody.annotation <- antibody.annotation[!duplicated(antibody.annotation$Gene.Name.processed),]
   antibodies = intersect(rownames(Y), antibody.annotation$Composite.Element.REF)
   Y = Y[ rownames(Y) %in% antibodies, ]
-  
+
   # Replace antibody identifiers with gene symbols
   antibody.annotation <- antibody.annotation[order(antibody.annotation$Composite.Element.REF),]
   Y <- Y[order(rownames(Y)),]
   rownames(Y) = antibody.annotation$Gene.Name.processed
-  
+
   # return
   list(X=X, Y=Y, Z=Z)
 }

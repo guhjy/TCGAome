@@ -1,8 +1,8 @@
-library(reshape)
-library(biomaRt)
-library(topGO)
-library(GOSemSim)
-library(cluster)
+#library(reshape)
+#library(biomaRt)
+#library(topGO)
+#library(GOSemSim)
+#library(cluster)
 
 
 # Gene Ontology Annotations for Human genes and for all Uniprot. No electronically inferred annotations (IEA)
@@ -36,7 +36,7 @@ read_raw_goa <- function(search_universe="human")
     }
     goa_raw <<- uniprot_goa_raw
   }
-  
+
   goa_raw
 }
 
@@ -45,25 +45,25 @@ prepare_goa_annotations <- function()
 {
   # Reads GOA only for human genes
   goa_raw = read_raw_goa()
-  
+
   # Pivots table on gene name
   goa = aggregate(data=goa_raw, GO~Gene,c)
   goa$GO = sapply(goa$GO, FUN = function(x) paste(x, collapse=", "))
-  
+
   # Maps gene identifiers
   map_entrez_hgnc = query_biomart(attributes=c("entrezgene","hgnc_symbol"), filters=c("hgnc_symbol"), values=goa$Gene)
-  
+
   # Removes HGNC genes not having a map to Entrez
   goa = goa[ goa$Gene %in% map_entrez_hgnc$hgnc_symbol ,]
-  
+
   # Merges all annotations
   goa = merge(x = goa, y = map_entrez_hgnc, by.x = "Gene", by.y = "hgnc_symbol", all.x = F)
-  
+
   # Writes to a file the format expected
   goa = goa[ , c("entrezgene", "GO")]
   goa_annotations_dest = paste(GOA_ANNOTATIONS_FOLDER, "goa_parsed.txt", sep="")
   write.table(goa, file = goa_annotations_dest, row.names = F, quote = F, sep = "\t")
-  
+
   goa_annotations_dest
 }
 
@@ -89,7 +89,7 @@ get_functional_similarity <- function(term1, term2, measure = "UI", gene_list = 
   }
   term1_genes = unique(goa[goa$GO == term1, c("Gene")])
   term2_genes = unique(goa[goa$GO == term2, c("Gene")])
-  
+
   # calculates the union
   term_union = union(term1_genes, term2_genes)
   if (length(term_union) == 0 | length(term1_genes) == 0 | length(term2_genes) == 0){
@@ -122,7 +122,7 @@ get_goa_size <- function(go_term, search_universe="human")
   {
     max_goa_size <<- max(table(unique(goa_raw)$GO))
   }
-  (length(unique(goa_raw[goa_raw$GO == go_term , 1])) / max_goa_size) 
+  (length(unique(goa_raw[goa_raw$GO == go_term , 1])) / max_goa_size)
 }
 
 # Calculates the enriched GO terms for a list of genes based on GOA
@@ -135,13 +135,13 @@ get_go_enrichment  <- function (gene_list, pvalue_threshold=0.01, ontology="BP")
   geneList <- factor(as.integer(geneNames %in% gene_list))
   names(geneList) <- geneNames
   GOdata <- new("topGOdata", ontology = ontology, allGenes = geneList, annot = annFUN.gene2GO, gene2GO = geneID2GO)
-  
+
   # Performs enrichment test
   test.Fisher <- new("classicCount", testStatistic = GOFisherTest, name = "Fisher test")
   resultFisher <- getSigGroups(GOdata, test.Fisher)
   #test.KS <- new("classicScore", testStatistic = GOKSTest, name = "Kolmogorov-Smirnov test")
   #resultKS <- getSigGroups(GOdata, test.KS)
-  
+
   # The subgraph induced by the top 5 GO terms identified by the elim algorithm for scoring GO terms for
   # enrichment. Rectangles indicate the 5 most significant terms. Rectangle color represents the relative significance,
   # ranging from dark red (most significant) to bright yellow (least significant). For each node, some basic information
@@ -149,23 +149,23 @@ get_go_enrichment  <- function (gene_list, pvalue_threshold=0.01, ontology="BP")
   # is shown. The forth line is showing the number of significant genes and the total number of genes annotated to
   # the respective GO term.
   #showSigOfNodes(GOdata, score(resultFisher), firstSigNodes = 5, useInfo = 'all')
-  
+
   results <- GenTable(GOdata, classicFisher = resultFisher,
               #classicKS = resultKS, #elimKS = resultKS.elim,
               orderBy = "classicFisher", ranksOf = "classicFisher", topNodes = length(names(resultFisher@score)))
-  
+
   # Multiple test correction
   results$qvalue = p.adjust(results$classicFisher, method = "fdr")
-  
+
   # removes not significant results (keeps those significant)
   results = results[results$qvalue <= pvalue_threshold, ]
-  
+
   # Returns results
   list(
     TopGOdata = GOdata,
     data.frame = data.frame(
-      GO=as.character(results$GO.ID), 
-      pvalue=results$classicFisher, 
+      GO=as.character(results$GO.ID),
+      pvalue=results$classicFisher,
       qvalue=results$qvalue,
       name=results$Term,
       annotated_genes=results$Annotated,
@@ -207,7 +207,7 @@ hclust_clustering <- function(distance, distance_threshold){
   #plot(clustering)
   clusters = cutree(clustering, h=distance_threshold)
   #rect.hclust(fit, h=0.6, border="red")
-  
+
   clusters
 }
 
@@ -221,7 +221,7 @@ pam_clustering <- function(distance){
   k_best <- which.max(sil_width[2:30])
   clustering = pam(distance, k_best)
   clusters = clustering$clustering
-  
+
   clusters
 }
 
@@ -235,34 +235,34 @@ multidimensional_scaling <- function(distance){
     y = rep(0, length(x))
     names(y) = names(x)
   }
-  
+
   list(x=x, y=y)
 }
 
-# Plots GO terms according to the enrichment results 
+# Plots GO terms according to the enrichment results
 cluster_and_plot <- function (enrichment_results, gene_list, TopGOdata, method="Wang", search_universe="human", output_dir=".", distance_threshold = 0.7, frequency_threshold=0.05, clustering_method = "hclust", ont="BP")
 {
-  
+
   # Calculates the dissimilarity between GO terms
   if (method %in% c("Resnik", "Lin", "Rel", "Jiang", "Wang", "UI", "binary", "bray-curtis", "cosine") ) {
-    
+
     # Prepares table
     enrichment_results = cbind(enrichment_results, cluster=rep("", dim(enrichment_results)[1]), cluster_name=rep("", dim(enrichment_results)[1]))
     enrichment_results$cluster = as.character(enrichment_results$cluster)
     enrichment_results$cluster_name = as.character(enrichment_results$cluster_name)
-    
+
     # Removes all terms with a frequency in GOA >5%
     #enrichment_results = enrichment_results[enrichment_results$size <= frequency_threshold, ]
-    
+
     # Obtains the distance matrix between terms
     if (search_universe %in% c("human", "uniprot")){
-      go_distance = go_distance_matrix(enrichment_results, measure = method, ont=ont, search_universe=search_universe)  
+      go_distance = go_distance_matrix(enrichment_results, measure = method, ont=ont, search_universe=search_universe)
     } else if (search_universe == "gene_list") {
       # similarity calculations are based on GOA associations limited to those genes in the gene list
       # only applicable to binary, UI, Bray-Curtis and cosine distances
       go_distance = go_distance_matrix(enrichment_results, measure = method, gene_list = gene_list, ont=ont)
     }
-    
+
     # Clustering
     if (clustering_method == "hclust"){
       clusters = hclust_clustering(go_distance, distance_threshold)
@@ -271,7 +271,7 @@ cluster_and_plot <- function (enrichment_results, gene_list, TopGOdata, method="
     } else {
       stop ("Clustering method not supported")
     }
-    
+
     # Select cluster representatives
     for (cluster in unique(sort(clusters))){
       group = names(clusters)[clusters %in% cluster]
@@ -286,40 +286,40 @@ cluster_and_plot <- function (enrichment_results, gene_list, TopGOdata, method="
       enrichment_results[enrichment_results$GO %in% group, c("cluster_name")] = enrichment_results[enrichment_results$GO == group[representative_idx], c("name")]
     }
     cluster_representatives = enrichment_results[enrichment_results$GO == enrichment_results$cluster, ]
-    
+
     # Multi Dimensional Scaling on all terms
     mds_results = multidimensional_scaling(go_distance)
     enrichment_results = cbind(enrichment_results, mds_results$x)
     enrichment_results = cbind(enrichment_results, mds_results$y)
-    
+
     # Stores the results of clustering and MDS
     write.table(enrichment_results, file=paste(output_dir, "enrichment_results.txt", sep="/"), sep="\t", quote = F, row.names = F)
-    
+
     # Stores Euclidean distance to centroid to evaluate dispersion
     avg_x = mean(x)
     avg_y = mean(y)
     distances_to_centroid = sqrt((x-avg_x)^2 + (y-avg_y)^2)
     write.table(data.frame(GO=names(distances_to_centroid), distance_to_centroid=distances_to_centroid), file=paste(output_dir, "distances_to_centroid.txt", sep="/"), sep="\t", quote = F, row.names = F)
-    
+
     # Multi Dimensional Scaling just on clusters
     go_distance_m = as.matrix(go_distance)
     cluster_distance = as.dist(go_distance_m[rownames(go_distance_m) %in% cluster_representatives$GO, colnames(go_distance_m) %in% cluster_representatives$GO])
     mds_results = multidimensional_scaling(cluster_distance)
     cluster_representatives = cbind(cluster_representatives, mds_results$x)
     cluster_representatives = cbind(cluster_representatives, mds_results$y)
-    
+
     # Stores the results of clustering and MDS on representatives
-    write.table(cluster_representatives, file=paste(output_dir, "cluster_representatives.txt", sep="/"), sep="\t", quote = F, row.names = F)  
-    
+    write.table(cluster_representatives, file=paste(output_dir, "cluster_representatives.txt", sep="/"), sep="\t", quote = F, row.names = F)
+
     # Plots
     plot_scatter(cluster_representatives, output_dir)
     plot_table(cluster_representatives = cluster_representatives, output_dir)
     plot_treemap(enrichment_results = enrichment_results, output_dir)
     plot_graph(cluster_representatives = cluster_representatives, GOdata = TopGOdata, output_dir)
-    
+
   } else {
     # by default runs Wang semantic similarity
     stop("Non supported method.")
   }
-  
+
 }

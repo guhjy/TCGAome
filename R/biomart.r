@@ -1,4 +1,4 @@
-library(biomaRt)
+#library(biomaRt)
 
 # Loads the Ensembl Biomart for Homo sapiens
 load_biomart <- function ()
@@ -11,7 +11,7 @@ load_biomart <- function ()
     dataset="hsapiens_gene_ensembl"
     ensembl <<- useDataset(dataset, mart=ensembl)
   }
-  
+
   ensembl
 }
 
