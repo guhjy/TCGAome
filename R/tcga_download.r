@@ -7,7 +7,7 @@ get.data <- function (tumor_types)
   firehose_datasets = getFirehoseDatasets()
   #firehose_dates= getFirehoseRunningDates()
   FIREHOSE_DATE = "20150402"  # we fix it so data is consistent during development
-  FIREHOSE_DIR <<- "../data/firehose"
+  FIREHOSE_DIR <<- get_package_folder("data/firehose")
   
   datasets = list()     # whole datasets
   matrices = list()
@@ -23,6 +23,7 @@ get.data <- function (tumor_types)
     # downloads the data
     datasets[[tumor_type]] = getFirehoseData (dataset=tumor_type, runDate=FIREHOSE_DATE, RNAseq2_Gene_Norm = TRUE, RPPA=TRUE, destdir=FIREHOSE_DIR)
     
+    flog.info("Loading data for %s", tumor_type)
     # gets data matrices
     matrices[[tumor_type]]$X = datasets[[tumor_type]]@RNASeq2GeneNorm
     matrices[[tumor_type]]$Y = datasets[[tumor_type]]@RPPAArray[[1]]@DataMatrix
@@ -43,6 +44,9 @@ get.data <- function (tumor_types)
     #matrices[[tumor_type]]$Z = matrices[[tumor_type]]$Z
     
     matrices[[tumor_type]] = get_RPPA_annotations(tumor_type, matrices[[tumor_type]])
+    
+    # adds the tumor type in the clinical data matrix
+    matrices[[tumor_type]]$Z = cbind(matrices[[tumor_type]]$Z, Tumor_type=c(tumor_type))
     
     # unlists matrices of each data type for later processing
     if (is.null(X)){
@@ -84,9 +88,9 @@ get.data <- function (tumor_types)
   Z <- Z[order(rownames(Z)),]
   
   # Writes input matrices
-  write.table(X, file="../data/X_rnaseqnorm.txt", quote = F, sep = "\t", na = "")
-  write.table(Y, file="../data/Y_rppa.txt", quote = F, sep = "\t", na = "")
-  write.table(Z, file="../data/Z_clinical.txt", quote = F, sep = "\t", na = "")
+  write.table(X, file=paste(RESULTS_FOLDER, "X_rnaseqnorm.txt", sep="/"), quote = F, sep = "\t", na = "")
+  write.table(Y, file=paste(RESULTS_FOLDER, "Y_rppa.txt", sep="/"), quote = F, sep = "\t", na = "")
+  write.table(Z, file=paste(RESULTS_FOLDER, "Z_clinical.txt", sep="/"), quote = F, sep = "\t", na = "")
   
   flog.info("Finished downloading TCGA data.")
   
@@ -94,22 +98,40 @@ get.data <- function (tumor_types)
   list(X=X, Y=Y, Z=Z) 
 }
 
+RPPA_ANNOTATIONS = list(
+  "BRCA"="http://gdac.broadinstitute.org/runs/stddata__2015_08_21/data/BRCA/20150821/gdac.broadinstitute.org_BRCA.RPPA_AnnotateWithGene.Level_3.2015082100.1.0.tar.gz",
+  "OV"="http://gdac.broadinstitute.org/runs/stddata__2015_08_21/data/OV/20150821/gdac.broadinstitute.org_OV.RPPA_AnnotateWithGene.Level_3.2015082100.0.0.tar.gz"
+  )
+
 # Downloads annotations of RPPA antibodies for a given tumor type
 get_RPPA_annotations <- function(tumor_type, matrices){
   
   flog.info("Loading RPPA annotations for %s", tumor_type)
   
-  RPPA.annotations.URL.template = "http://gdac.broadinstitute.org/runs/stddata__2015_08_21/data/%TUMOR_TYPE%/20150821/gdac.broadinstitute.org_%TUMOR_TYPE%.RPPA_AnnotateWithGene.Level_3.2015082100.1.0.tar.gz"
-  RPPA.annotations.file.template = paste(FIREHOSE_DIR, "%TUMOR_TYPE%.RPPA_AnnotateWithGene.Level_3.2015082100.1.0/%TUMOR_TYPE%.antibody_annotation.txt", sep="/")
+  #RPPA.annotations.URL.template = "http://gdac.broadinstitute.org/runs/stddata__2015_08_21/data/%TUMOR_TYPE%/20150821/gdac.broadinstitute.org_%TUMOR_TYPE%.RPPA_AnnotateWithGene.Level_3.2015082100.1.0.tar.gz"
+  #RPPA.annotations.URL.template_2 = "http://gdac.broadinstitute.org/runs/stddata__2015_08_21/data/%TUMOR_TYPE%/20150821/gdac.broadinstitute.org_%TUMOR_TYPE%.RPPA_AnnotateWithGene.Level_3.2015082100.0.0.tar.gz"
+  RPPA.annotations.file.template = paste(FIREHOSE_DIR, "%TUMOR_FOLDER%/%TUMOR_TYPE%.antibody_annotation.txt", sep="/")
   
   # Downloads the annotations if necessary
-  RPPA.annotations.URL = gsub("%TUMOR_TYPE%", tumor.type, RPPA.annotations.URL.template)
+  RPPA.annotations.URL = RPPA_ANNOTATIONS[[tumor_type]]
   RPPA.annotations.file = paste(FIREHOSE_DIR, basename(RPPA.annotations.URL), sep="/")
-  if (!file.exists(BRCA.annotations.file)){
+  if (!file.exists(RPPA.annotations.file)){
     download.file(RPPA.annotations.URL, RPPA.annotations.file)
   }
-  untar(BRCA.annotations.file, exdir = FIREHOSE_DIR)
-  output_matrices = normalize_variable_names(matrices$X, matrices$Y, matrices$Z, gsub("%TUMOR_TYPE%", tumor.type, RPPA.annotations.file.template))
+  
+  # Uncompressing annotations
+  if (file.exists(RPPA.annotations.file)){
+    untar(RPPA.annotations.file, exdir = FIREHOSE_DIR)
+    output_matrices = normalize_variable_names(matrices$X, matrices$Y, matrices$Z, 
+                                               gsub("%TUMOR_FOLDER%", 
+                                                    gsub(".tar.gz", "", 
+                                                         basename(RPPA.annotations.file)), 
+                                                    gsub("%TUMOR_TYPE%", 
+                                                         tumor_type, RPPA.annotations.file.template)))
+  } else {
+    # Annotations not found where expected
+    flog.error("Cannot find RPPA annotations for tumor type %s.", tumor_type)
+  }
   
   flog.info("Finished loading RPPA annotations.")
   

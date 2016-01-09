@@ -6,6 +6,7 @@ library(grid)
 library(VennDiagram)
 library(ggbiplot)
 library(gplots)
+library(Cairo)
 
 # Plots enriched GO terms in a scatter plot after clustering and filtering
 plot_scatter <-function(cluster_representatives, output_dir)
@@ -246,6 +247,16 @@ mcia_plot_variables <- function(mcia_result, mcia_selected_variables, output_dir
   Cairo(file=paste(output_dir, file_name, sep = "/"), type="png", units="in", width=10, height=7, pointsize=12, dpi=600)
   print({
     omicade4::plotVar(mcia_result, mcia_selected_variables, var.col=red500, var.lab=TRUE, bg.var.col="grey")
+  })
+  dev.off()
+}
+
+plot_samples_barplot <- function(Z, output_dir, file_name){
+  
+  Cairo(file=paste(output_dir, file_name, sep = "/"), type="png", units="in", width=10, height=7, pointsize=12, dpi=600)
+  print({
+    q <- qplot(x=Z$Tumor_type, data=Z, geom="bar", fill = Z$vital_status, ylab = "Count", xlab="Tumor type") 
+    q  + theme(axis.text.x = element_text(angle = 45, hjust = 1)) + geom_text( stat='count', aes(label=..count..), vjust=-1, size = 3, hjust = 0.5, position="stack")
   })
   dev.off()
 }

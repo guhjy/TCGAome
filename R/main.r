@@ -30,4 +30,13 @@ get_package_folder <- function(relative_path){
   paste(system.file(package = "TCGAome"), relative_path, sep="/")
 }
 
+get_results_folder <- function()
+{
+  timestamp = format(Sys.time(),"%Y%m%d_%H%M%S")
+  results_folder = get_package_folder(paste("results", timestamp, sep="_"))
+  dir.create(results_folder)
+  
+  results_folder
+}
+
 
