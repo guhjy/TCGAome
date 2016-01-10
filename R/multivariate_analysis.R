@@ -219,6 +219,8 @@ spls.analysis <- function(X, Y, Z, topN=5, selection_method="loadings")
   write.table(Y_selected_variables, file = paste(output_dir, "RPPA_selected_variables.txt", sep="/"), quote=F, row.names=F, sep = "\t")
   write.table(selected_variables, file = paste(output_dir, "selected_variables.txt", sep="/"), quote=F, row.names=F, sep = "\t")
 
+  # TODO: plots selected variables
+
   flog.info("sPLS finished.")
 
   # return
@@ -242,6 +244,18 @@ mcia.analysis <- function(X, Y, Z, topN=5, cia.nf=5)
 
   # Multiple Co-Inertia Analysis
   mcia_result <- mcia(matrices_list, nsc=F, cia.nf = cia.nf)
+
+  # Extracts Co-Inertia plot coords
+  coinertia_variable_coords = mcia_result$mcoa$axis
+  coinertia_X_variable_coords = coinertia_variable_coords[grep("\\.df1", row.names(variable_coinertia_coords)), ]
+  coinertia_Y_variable_coords = coinertia_variable_coords[grep("\\.df2", row.names(variable_coinertia_coords)), ]
+  coinertia_X_variable_coords$variable = gsub("\\.df.", "", row.names(coinertia_X_variable_coords))
+  coinertia_Y_variable_coords$variable = gsub("\\.df.", "", row.names(coinertia_Y_variable_coords))
+  write.table(coinertia_X_variable_coords, file = paste(output_dir, "coinertia_plot_X_variables_coords.txt", sep="/"), quote=F, row.names=F, sep = "\t")
+  write.table(coinertia_Y_variable_coords, file = paste(output_dir, "coinertia_plot_Y_variables_coords.txt", sep="/"), quote=F, row.names=F, sep = "\t")
+  coinertia_sample_coords = mcia_result$mcoa$SynVar
+  coinertia_sample_coords$sample = row.names(coinertia_sample_coords)
+  write.table(coinertia_sample_coords, file = paste(output_dir, "coinertia_sample_coords.txt", sep="/"), quote=F, row.names=F, sep = "\t")
 
   # PLot all results
   mcia_plot(mcia_result, phenotype=Z$Tumor_type, output_dir=output_dir, file_name="visualizations.png")
