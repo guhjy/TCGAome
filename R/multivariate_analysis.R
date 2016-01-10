@@ -127,6 +127,11 @@ spls.analysis <- function(X, Y, Z, topN=5, selection_method="loadings")
 
   flog.info("Running sparse Partial Least Squares (sPLS) analysis...")
 
+  if (!selection_method %in% c("correlation", "loadings")){
+    flog.error("Selection method '%s' non supported.", selection_method)
+    stop("Selection method non supported!")
+  }
+
   output_dir = paste(RESULTS_FOLDER, "spls", sep="/")
   dir.create(output_dir)
 

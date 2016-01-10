@@ -506,6 +506,8 @@ plot_venn <- function(set1, set2, set3, labels){
 #' @param run_hclust_analysis Flag indicating if the hierarchical clustering analysis should run, this is part of the data pre-analysis (default: FALSE)
 #' @param run_rgcca Flag indicating if the Regularized Generalized Canonical Correlation Analysis (RGCCA) should run (default: FALSE). Beware that this analysis is not intended for datasets with number of variables >> number of samples.
 #' @param run_rcca Flag indicating if the Regularized Canonical Correlation Analysis (rCCA) should run (default: FALSE). Beware that this analysis is not intended for datasets with number of variables >> number of samples.
+#' @param topN Indicates the top number of variables to select on MCIA and sPLS results (default: 5). It will select N variables on each of the data types, on each of the three first components and on each extreme of range, that is a maximum of 2*3*2*N, considering that there might be overlap between components.
+#' @param spls_selection_method Indicates the method for variable selection on sPLS results. One of "correlation" or "loadings" (default: "loadings"). Loadings method will choose those variables maximizing variance across the samples, while correlation method will choose those variables with a higher correlation with other variables, that is those variables more distant to the origin in the correlation plot.
 #'
 #' @keywords TCGAome
 #' @export
@@ -515,7 +517,9 @@ run.TCGAome <- function(tumor_types,
                         run_pca_analysis=TRUE,
                         run_hclust_analysis=FALSE,
                         run_rgcca=FALSE,
-                        run_rcca=FALSE
+                        run_rcca=FALSE,
+                        variable_selection_topN = 5,
+                        spls_selection_method = "loadings"
                         ){
 
   # Loads bioconductor packages
@@ -553,12 +557,11 @@ run.TCGAome <- function(tumor_types,
   }
 
   # Runs MCIA
-  mcia.results = mcia.analysis(X = preprocessed.matrices$X, Y = preprocessed.matrices$Y, Z = matrices$Z, topN = 5, cia.nf = 5)
+  mcia.results = mcia.analysis(X = preprocessed.matrices$X, Y = preprocessed.matrices$Y, Z = matrices$Z, topN = topN, cia.nf = 5)
 
   # Runs sPLS
-  #spls.preprocessed.matrices = preprocess.data(matrices$X, matrices$Y, correlation.thr = 0.5)
-  #spls.results = spls.analysis(X=spls.preprocessed.matrices$X, Y=spls.preprocessed.matrices$Y, Z=matrices$Z)
-  spls.results = spls.analysis(X = preprocessed.matrices$X, Y = preprocessed.matrices$Y, Z = matrices$Z, topN = 5)
+  spls.results = spls.analysis(X = preprocessed.matrices$X, Y = preprocessed.matrices$Y, Z = matrices$Z, topN = topN, selection_method = spls_selection_method)
+
 
   # Runs RGCCA
   if (run_rgcca){
