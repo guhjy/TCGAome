@@ -134,7 +134,7 @@ spls.analysis <- function(X, Y, Z, topN=10)
   colnames(X) = paste(colnames(X), ".X", sep="")
   colnames(Y) = paste(colnames(Y), ".Y", sep="")
 
-  #spls_result <- spls(as.matrix(X), as.matrix(Y), ncomp = 3, mode = 'regression', keepX=c(50, 50, 50), keepY=c(50, 50, 50))
+  # Runs sPLS
   spls_result <- spls(as.matrix(X), as.matrix(Y), ncomp = 3, mode = 'regression')
 
   # plots the individuals
@@ -146,43 +146,38 @@ spls.analysis <- function(X, Y, Z, topN=10)
   # plots heatmap
   mixomics_plot_heatmap(spls_result, output_dir=output_dir, file_name="heatmap.png")
 
-  # Select variables
-  selected_variables = mixOmics::selectVar(spls_result, comp=3)
-  rownames(selected_variables$X$value) = gsub("\\.X", "", rownames(selected_variables$X$value))
-  rownames(selected_variables$Y$value) = gsub("\\.Y", "", rownames(selected_variables$Y$value))
-  selected_variables$X$name= rownames(selected_variables$X$value)
-  selected_variables$Y$name = rownames(selected_variables$Y$value)
+  # Gets the coordinates of all variables in the correlation plot and calculates the distance to the origin
+  X_coords = as.data.frame(cor(spls_result$X,
+                    spls_result$variates$X + spls_result$variates$Y,
+                    use = "pairwise"))
+  names(X_coords) = c("coord1", "coord2", "coord3")
+  X_coords$variable = gsub("\\.X", "", row.names(X_coords))
+  X_coords$distance2origin = ((X_coords$coord1 ^ 2) + (X_coords$coord2 ^ 2) +(X_coords$coord3 ^ 2))**(1/2)
+  Y_coords = as.data.frame(cor(spls_result$Y,
+                    spls_result$variates$X + spls_result$variates$Y,
+                    use = "pairwise"))
+  names(Y_coords) = c("coord1", "coord2", "coord3")
+  Y_coords$variable = gsub("\\.Y", "", colnames(spls_result$Y))
+  Y_coords$distance2origin = ((Y_coords$coord1 ^ 2) + (Y_coords$coord2 ^ 2) +(Y_coords$coord3 ^ 2))**(1/2)
 
-  # Takes the 10 highest values on the X axis
-  positive_X = selected_variables$X$name[selected_variables$X$value$value.var >= 0]
-  b = length(positive_X)
-  a = b - topN + 1
-  positive_X_top = positive_X[a:b]
-  # Takes the 10 lowest values on the X axis
-  negative_X = selected_variables$X$name[selected_variables$X$value$value.var < 0]
-  b = length(negative_X)
-  a = b - topN + 1
-  negative_X_top = negative_X[a:b]
-  # Takes the 10 highest values on the Y axis
-  positive_Y = selected_variables$Y$name[selected_variables$Y$value$value.var >= 0]
-  b = length(positive_Y)
-  a = b - topN + 1
-  positive_Y_top = positive_Y[a:b]
-  # Takes the 10 lowest values on the Y axis
-  negative_Y = selected_variables$Y$name[selected_variables$Y$value$value.var < 0]
-  b = length(negative_Y)
-  a = b - topN + 1
-  negative_Y_top = negative_Y[a:b]
+  # Stores the data
+  write.table(X_coords, file = paste(output_dir, "correlation_plot_X_variables_coords.txt", sep="/"), quote=F, row.names=F, sep = "\t")
+  write.table(Y_coords, file = paste(output_dir, "correlation_plot_Y_variables_coords.txt", sep="/"), quote=F, row.names=F, sep = "\t")
 
+  # Selects top 20 variables with highest correlations (distance to the origin in the correlaion plot)
+  X_selected_variables = X_coords[order(X_coords$distance2origin, decreasing = T)[1:20], ]$variable
+  Y_selected_variables = Y_coords[order(Y_coords$distance2origin, decreasing = T)[1:20], ]$variable
+  selected_variables = union(X_selected, Y_selected)  # avoids genes identified in both datasets
 
-  selected_variables_names = c(positive_X_top, negative_X_top, positive_Y_top, negative_Y_top)
-  selected_genes = c(positive_X_top, negative_X_top)
-  selected_proteins = c(positive_Y_top, negative_Y_top)
+  # Writes selected variables
+  write.table(X_selected_variables, file = paste(output_dir, "RNAseq_selected_variables.txt", sep="/"), quote=F, row.names=F, sep = "\t")
+  write.table(Y_selected_variables, file = paste(output_dir, "RPPA_selected_variables.txt", sep="/"), quote=F, row.names=F, sep = "\t")
+  write.table(selected_variables, file = paste(output_dir, "selected_variables.txt", sep="/"), quote=F, row.names=F, sep = "\t")
 
   flog.info("sPLS finished.")
 
   # return
-  list(results=spls_result, selected_variables=selected_variables_names, selected_genes=selected_genes, selected_proteins=selected_proteins)
+  list(results=spls_result, selected_variables=selected_variables, selected_genes=X_selected_variables, selected_proteins=Y_selected_variables)
 }
 
 ###
@@ -231,7 +226,7 @@ mcia.analysis <- function(X, Y, Z, topN=5, cia.nf=5)
   mcia_selected_variables = topVar(mcia_result, topN = topN)
   mcia_selected_genes = gsub("\\.df1", "", as.character(unlist(mcia_selected_variables[, 1:2])))
   mcia_selected_proteins = gsub("\\.df2", "", as.character(unlist(mcia_selected_variables[, 3:4])))
-  write.table(mcia_selected_variables, paste(output_dir, "top_variables.txt", sep="/"), quote = FALSE, sep = "\t", row.names = FALSE)
+  write.table(mcia_selected_variables, paste(output_dir, "selected_variables.txt", sep="/"), quote = FALSE, sep = "\t", row.names = FALSE)
   mcia_selected_variables = as.character(unlist(mcia_selected_variables))
 
   # Plots selected variables
