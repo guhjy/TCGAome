@@ -553,12 +553,12 @@ run.TCGAome <- function(tumor_types,
   }
 
   # Runs MCIA
-  mcia.results = mcia.analysis(X=preprocessed.matrices$X, Y=preprocessed.matrices$Y, Z=matrices$Z, topN=10, cia.nf=5)
+  mcia.results = mcia.analysis(X = preprocessed.matrices$X, Y = preprocessed.matrices$Y, Z = matrices$Z, topN = 5, cia.nf = 5)
 
   # Runs sPLS
   #spls.preprocessed.matrices = preprocess.data(matrices$X, matrices$Y, correlation.thr = 0.5)
   #spls.results = spls.analysis(X=spls.preprocessed.matrices$X, Y=spls.preprocessed.matrices$Y, Z=matrices$Z)
-  spls.results = spls.analysis(X=preprocessed.matrices$X, Y=preprocessed.matrices$Y, Z=matrices$Z)
+  spls.results = spls.analysis(X = preprocessed.matrices$X, Y = preprocessed.matrices$Y, Z = matrices$Z, topN = 5)
 
   # Runs RGCCA
   if (run_rgcca){

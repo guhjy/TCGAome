@@ -122,7 +122,7 @@ rgcca.analysis <- function (X, Y, Z)
 ###
 ### Sparse Partial Least Squares (sPLS)
 ###
-spls.analysis <- function(X, Y, Z, topN=10)
+spls.analysis <- function(X, Y, Z, topN=5, selection_method="loadings")
 {
 
   flog.info("Running sparse Partial Least Squares (sPLS) analysis...")
@@ -147,15 +147,11 @@ spls.analysis <- function(X, Y, Z, topN=10)
   mixomics_plot_heatmap(spls_result, output_dir=output_dir, file_name="heatmap.png")
 
   # Gets the coordinates of all variables in the correlation plot and calculates the distance to the origin
-  X_coords = as.data.frame(cor(spls_result$X,
-                    spls_result$variates$X + spls_result$variates$Y,
-                    use = "pairwise"))
+  X_coords = as.data.frame(cor(spls_result$X, spls_result$variates$X + spls_result$variates$Y, use = "pairwise"))
   names(X_coords) = c("coord1", "coord2", "coord3")
   X_coords$variable = gsub("\\.X", "", row.names(X_coords))
   X_coords$distance2origin = ((X_coords$coord1 ^ 2) + (X_coords$coord2 ^ 2) +(X_coords$coord3 ^ 2))**(1/2)
-  Y_coords = as.data.frame(cor(spls_result$Y,
-                    spls_result$variates$X + spls_result$variates$Y,
-                    use = "pairwise"))
+  Y_coords = as.data.frame(cor(spls_result$Y, spls_result$variates$X + spls_result$variates$Y, use = "pairwise"))
   names(Y_coords) = c("coord1", "coord2", "coord3")
   Y_coords$variable = gsub("\\.Y", "", colnames(spls_result$Y))
   Y_coords$distance2origin = ((Y_coords$coord1 ^ 2) + (Y_coords$coord2 ^ 2) +(Y_coords$coord3 ^ 2))**(1/2)
@@ -164,9 +160,53 @@ spls.analysis <- function(X, Y, Z, topN=10)
   write.table(X_coords, file = paste(output_dir, "correlation_plot_X_variables_coords.txt", sep="/"), quote=F, row.names=F, sep = "\t")
   write.table(Y_coords, file = paste(output_dir, "correlation_plot_Y_variables_coords.txt", sep="/"), quote=F, row.names=F, sep = "\t")
 
-  # Selects top 20 variables with highest correlations (distance to the origin in the correlaion plot)
-  X_selected_variables = X_coords[order(X_coords$distance2origin, decreasing = T)[1:20], ]$variable
-  Y_selected_variables = Y_coords[order(Y_coords$distance2origin, decreasing = T)[1:20], ]$variable
+  # Reads variables loadings
+  variable_loadings_comp1 = mixOmics::selectVar(spls_result, comp=1)
+  variable_loadings_comp2 = mixOmics::selectVar(spls_result, comp=2)
+  variable_loadings_comp3 = mixOmics::selectVar(spls_result, comp=3)
+
+  # Stores the loadings data
+  X_loadings_comp1 = variable_loadings_comp1$X$value
+  names(X_loadings_comp1) = c("comp1")
+  X_loadings_comp1$variable = row.names(X_loadings_comp1)
+  X_loadings_comp2 = variable_loadings_comp2$X$value
+  names(X_loadings_comp2) = c("comp2")
+  X_loadings_comp2$variable = row.names(X_loadings_comp2)
+  X_loadings_comp3 = variable_loadings_comp3$X$value
+  names(X_loadings_comp3) = c("comp3")
+  X_loadings_comp3$variable = row.names(X_loadings_comp3)
+  X_loadings = merge.data.frame(X_loadings_comp1, X_loadings_comp2, by = "variable")
+  X_loadings = merge.data.frame(X_loadings, X_loadings_comp3, by = "variable")
+  write.table(X_loadings, file = paste(output_dir, "X_variables_loadings.txt", sep="/"), quote=F, row.names=F, sep = "\t")
+  Y_loadings_comp1 = variable_loadings_comp1$Y$value
+  names(Y_loadings_comp1) = c("comp1")
+  Y_loadings_comp1$variable = row.names(Y_loadings_comp1)
+  Y_loadings_comp2 = variable_loadings_comp2$Y$value
+  names(Y_loadings_comp2) = c("comp2")
+  Y_loadings_comp2$variable = row.names(Y_loadings_comp2)
+  Y_loadings_comp3 = variable_loadings_comp3$Y$value
+  names(Y_loadings_comp3) = c("comp3")
+  Y_loadings_comp3$variable = row.names(Y_loadings_comp3)
+  Y_loadings = merge.data.frame(Y_loadings_comp1, Y_loadings_comp2, by = "variable")
+  Y_loadings = merge.data.frame(Y_loadings, Y_loadings_comp3, by = "variable")
+  write.table(Y_loadings, file = paste(output_dir, "Y_variables_loadings.txt", sep="/"), quote=F, row.names=F, sep = "\t")
+
+  if (selection_method == "correlation"){
+    # Selects top N variables with highest correlations (distance to the origin in the correlaion plot)
+    X_selected_variables = X_coords[order(X_coords$distance2origin, decreasing = T)[1:topN], ]$variable
+    Y_selected_variables = Y_coords[order(Y_coords$distance2origin, decreasing = T)[1:topN], ]$variable
+  } else if (selection_method == "loadings"){
+    # Selects top N variables with highest loadings, maximize variance in samples
+    # TODO: select topN t each component for positive vaues and for negative values separately
+    X_top_loadings_comp1 = gsub(".X", "", variable_loadings_comp1$X$name[1:topN])
+    Y_top_loadings_comp1 = gsub(".Y", "", variable_loadings_comp1$Y$name[1:topN])
+    X_top_loadings_comp2 = gsub(".X", "", variable_loadings_comp2$X$name[1:topN])
+    Y_top_loadings_comp2 = gsub(".Y", "", variable_loadings_comp2$Y$name[1:topN])
+    X_top_loadings_comp3 = gsub(".X", "", variable_loadings_comp3$X$name[1:topN])
+    Y_top_loadings_comp3 = gsub(".Y", "", variable_loadings_comp3$Y$name[1:topN])
+    X_selected_variables = union(X_top_loadings_comp1, union(X_top_loadings_comp2, X_top_loadings_comp3))
+    Y_selected_variables = union(Y_top_loadings_comp1, union(Y_top_loadings_comp2, Y_top_loadings_comp3))
+  }
   selected_variables = union(X_selected, Y_selected)  # avoids genes identified in both datasets
 
   # Writes selected variables
@@ -191,27 +231,6 @@ mcia.analysis <- function(X, Y, Z, topN=5, cia.nf=5)
   output_dir = paste(RESULTS_FOLDER, "mcia", sep="/")
   dir.create(output_dir)
 
-  #col.histological.type = as.numeric(Z$histological_type)
-  #col.histological.type[col.histological.type == 1] <- red500
-  #col.histological.type[col.histological.type == 2] <- green500
-  #col.histological.type[col.histological.type == 3] <- indigo500
-  #col.histological.type[col.histological.type == 4] <- amber500
-  #col.histological.type[col.histological.type == 5] <- yellow500
-  #col.histological.type[col.histological.type == 6] <- purple500
-
-  #col.disease.stage = as.numeric(Z$neoplasm_diseasestage)
-  #col.disease.stage[col.disease.stage == 1] <- red500
-  #col.disease.stage[col.disease.stage == 2] <- green500
-  #col.disease.stage[col.disease.stage == 3] <- indigo500
-  #col.disease.stage[col.disease.stage == 4] <- amber500
-  #col.disease.stage[col.disease.stage == 5] <- yellow500
-  #col.disease.stage[col.disease.stage == 6] <- purple500
-  #col.disease.stage[col.disease.stage == 7] <- brown500
-  #col.disease.stage[col.disease.stage == 8] <- cyan500
-  #col.disease.stage[col.disease.stage == 9] <- lime500
-  #col.disease.stage[col.disease.stage == 10] <- black
-  #col.disease.stage[is.na(col.disease.stage)] <- grey500
-
   matrices_list = list(as.matrix(t(X)), as.matrix(t(Y)))
   sapply(matrices_list, dim)
   all(apply((x <- sapply(matrices_list, colnames)), 2, function(y)identical(y, x[,1])))
@@ -222,20 +241,36 @@ mcia.analysis <- function(X, Y, Z, topN=5, cia.nf=5)
   # PLot all results
   mcia_plot(mcia_result, phenotype=Z$Tumor_type, output_dir=output_dir, file_name="visualizations.png")
 
-  # Selects top 5 positive and negative associations and plots them, that is 20 variables
-  mcia_selected_variables = topVar(mcia_result, topN = topN)
-  mcia_selected_genes = gsub("\\.df1", "", as.character(unlist(mcia_selected_variables[, 1:2])))
-  mcia_selected_proteins = gsub("\\.df2", "", as.character(unlist(mcia_selected_variables[, 3:4])))
-  write.table(mcia_selected_variables, paste(output_dir, "selected_variables.txt", sep="/"), quote = FALSE, sep = "\t", row.names = FALSE)
-  mcia_selected_variables = as.character(unlist(mcia_selected_variables))
+  # Selects top N positive and negative associations at X and Y and plots them, that is a maximum of 4*3*N variables
+  selected_variables_1 = topVar(mcia_result, axis=1, topN = topN)
+  X_selected_variables_1 = gsub("\\.df1", "", as.character(unlist(selected_variables_1[, 1:2])))
+  Y_selected_variables_1 = gsub("\\.df2", "", as.character(unlist(selected_variables_1[, 3:4])))
+  selected_variables_1 = as.character(unlist(selected_variables_1[, 1:4]))
+  selected_variables_2 = topVar(mcia_result, axis=2, topN = topN)
+  X_selected_variables_2 = gsub("\\.df1", "", as.character(unlist(selected_variables_2[, 1:2])))
+  Y_selected_variables_2 = gsub("\\.df2", "", as.character(unlist(selected_variables_2[, 3:4])))
+  selected_variables_2 = as.character(unlist(selected_variables_2[, 1:4]))
+  selected_variables_3 = topVar(mcia_result, axis=3, topN = topN)
+  X_selected_variables_3 = gsub("\\.df1", "", as.character(unlist(selected_variables_3[, 1:2])))
+  Y_selected_variables_3 = gsub("\\.df2", "", as.character(unlist(selected_variables_3[, 3:4])))
+  selected_variables_3 = as.character(unlist(selected_variables_3[, 1:4]))
+
+  selected_variables = union(selected_variables_1, union(selected_variables_2, selected_variables_3))
+  X_selected_variables = union(X_selected_variables_1, union(X_selected_variables_2, X_selected_variables_3))
+  Y_selected_variables = union(Y_selected_variables_1, union(Y_selected_variables_2, Y_selected_variables_3))
 
   # Plots selected variables
-  mcia_plot_variables(mcia_result, mcia_selected_variables, output_dir=output_dir, file_name="topN.variables.png")
+  mcia_plot_variables(mcia_result, selected_variables, output_dir=output_dir, file_name="topN.variables.png")
 
-  # Removes the suffix that identifies a variable as gene or protein
-  mcia_selected_variables = gsub("\\.df.", "", mcia_selected_variables)
+  # Removes the suffix that identifies a variable as gene or protein before writing
+  selected_variables = gsub("\\.df.", "", selected_variables)
+
+  # Stores selected variables
+  write.table(X_selected_variables, file = paste(output_dir, "RNAseq_selected_variables.txt", sep="/"), quote=F, row.names=F, sep = "\t")
+  write.table(Y_selected_variables, file = paste(output_dir, "RPPA_selected_variables.txt", sep="/"), quote=F, row.names=F, sep = "\t")
+  write.table(selected_variables, file = paste(output_dir, "selected_variables.txt", sep="/"), quote=F, row.names=F, sep = "\t")
 
   flog.info("MCIA finished.")
 
-  list(results=mcia_result, selected_variables=mcia_selected_variables, selected_genes=mcia_selected_genes, selected_proteins=mcia_selected_proteins)
+  list(results=mcia_result, selected_variables=selected_variables, selected_genes=mcia_selected_genes, selected_proteins=mcia_selected_proteins)
 }
