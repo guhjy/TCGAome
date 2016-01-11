@@ -12,68 +12,134 @@
 
 
 
-###
-### Results evaluation
-###
-results.evaluation <- function(spls.results, mcia.results)
+results_evaluation <- function(spls_results, mcia_results)
 {
+  flog.info("Evaluating results from MCIA and sPLS ...")
 
-  # TSGs and oncogenes from publication Vogelstein et al. (2013). Cancer genome landscapes. Science
-  oncogenes_and_tsg = read.csv("../data/oncogenes_and_tsg.processed.txt", sep="\t")
-  oncogenes = as.character(oncogenes_and_tsg[oncogenes_and_tsg$Classification == "Oncogene", 1])
-  tsgs = as.character(oncogenes_and_tsg[oncogenes_and_tsg$Classification == "TSG", 1])
-  #oncogenes = intersect(colnames(X), oncogenes)
-  #tsgs = intersect(colnames(X), tsgs)
-  as.character(oncogenes_and_tsg$Gene.Symbol)
+  output_dir = paste(RESULTS_FOLDER, "results_evaluation", sep="/")
+  dir.create(output_dir)
 
+  # Compares to TSGs and oncogenes from publication Vogelstein et al. (2013). Cancer genome landscapes. Science
+  vogelstein_oncogenes_and_tsg = read.csv(paste(get_package_folder("inst"), "vogelstein_oncogenes_and_tsg.processed.txt", sep="/"), sep="\t")
+  #oncogenes = as.character(oncogenes_and_tsg[oncogenes_and_tsg$Classification == "Oncogene", 1])
+  #tsgs = as.character(oncogenes_and_tsg[oncogenes_and_tsg$Classification == "TSG", 1])
 
   # Plots Venn diagram
   plot_triple_venn(
-    mcia.results$selected_variables,
-    spls.results$selected_variables,
-    as.character(oncogenes_and_tsg$Gene.Symbol),
-    c("MCIA", "sPLS", "Oncogenes and TSGs",),
-    output_dir="../results",
-    file_name="venn.png"
+    mcia_results$selected_variables,
+    spls_results$selected_variables,
+    as.character(vogelstein_oncogenes_and_tsg$Gene.Symbol),
+    c("MCIA selected genes", "sPLS selected genes", "Oncogenes and TSGs (Vogelstein et al. 2013)"),
+    output_dir=output_dir,
+    file_name="selected_genes_vs_vogelstein_venn.png"
+  )
+
+  # Compares to Tumor Suppressor Gene Database selected by differential gene expression pan-cancer analysis
+  tsg_database = read.table(paste(get_package_folder("inst"), "tsg_database_sig_exp.txt", sep="/"), header=T, sep="\t")
+
+  # Plots Venn diagram
+  plot_triple_venn(
+    mcia_results$selected_variables,
+    spls_results$selected_variables,
+    tsg_database$Symbol,
+    c("MCIA selected genes", "sPLS selected genes", "Tumor Suppressor Genes Database"),
+    output_dir=output_dir,
+    file_name="selected_genes_vs_tsgdb_venn.png"
   )
 
 
-  # TSGs in BRCA tumors selected by differential gene expression pan-cancer analysis
-  brca_tsg = read.table("../data/BRCA_down_regulated_TSgenes.txt", col.names = c("gene_id", "gene_name"))
-  brca_tsg = intersect(colnames(X), brca_tsg$gene_name)
+  intersect_mcia_vogelstein = intersect(vogelstein_oncogenes_and_tsg$Gene.Symbol, mcia_results$selected_variables)
+  intersect_spls_vogelstein = intersect(vogelstein_oncogenes_and_tsg$Gene.Symbol, spls_results$selected_variables)
+  intersect_mcia_tsgdb = intersect(tsg_database$Symbol, mcia_results$selected_variables)
+  intersect_spls_tsgdb = intersect(tsg_database$Symbol, spls_results$selected_variables)
+  gene_universe = gsub("\\.df.", "", row.names(mcia_results$results$mcoa$axis))
+  intersect_vogelstein_geneuniverse = intersect(vogelstein_oncogenes_and_tsg$Gene.Symbol, gene_universe)
+  intersect_tsgdb_geneuniverse = intersect(tsg_database$Symbol, gene_universe)
 
-  # BRCA TSGs selected by MCIA in the top 5
-  known_brca_tsg_selected_by_mcia = intersect(brca_tsg, mcia_selected_variables)
-  brca_tsg_variables = paste(brca_tsg, ".df1", sep="")
-  # Plots BRCA TSGs against MCIA variable space
-  plotVar(mcia_result, brca_tsg_variables, var.col=red500, bg.var.col="grey")
+  # Calculates the probability of finding a TSG or oncogene in the selected genes by chance
+  trials_mcia = length(mcia_results$selected_variables)
+  trials_spls = length(spls_results$selected_variables)
+  n = length(gene_universe)
+  n1 = length(intersect_vogelstein_geneuniverse)
+  n2 = length(intersect_tsgdb_geneuniverse)
 
-  # Oncogenes and TSGs selected by MCIA in the top 5
-  known_tsgs_selected_by_mcia = intersect(tsgs, mcia_selected_variables)
-  known_oncogenes_selected_by_mcia = intersect(oncogenes, mcia_selected_variables)
-
-  # Plots TSGs against MCIA variable space
-  plotVar(mcia_result, paste(oncogenes, ".df1", sep=""), var.col=red500, bg.var.col="grey")
-  plotVar(mcia_result, paste(tsgs, ".df1", sep=""), var.col=red500, bg.var.col="grey")
-
-
-  # Calculate the probability of finding a TSG or oncogene in the top 10 by chance
-  trials = 10
-  n = dim(X)[2]
-  n1 = length(brca_tsg)
-  n2 = length(oncogenes)
-
-  # p1 = 0.2672634; p2 = 0.02786402
   binomial_coefficient <- function(n, k) exp(lfactorial(n) - lfactorial(k) - lfactorial(n-k))
-  p1 = 1 - exp(log(binomial_coefficient(n-n1, trials)) - log(binomial_coefficient(n, trials)))
-  p2 = 1 - exp(log(binomial_coefficient(n-n2, trials)) - log(binomial_coefficient(n, trials)))
+
+  # Probability of finding 1 of the selected genes being part of the Vogelstein list
+  p1_mcia = 1 - exp(log(binomial_coefficient(n-n1, trials_mcia)) - log(binomial_coefficient(n, trials_mcia)))
+  flog.info("Probability that 1 of the MCIA selected variables is part of the Vogelstein list by chance: %f", p1_mcia)
+  p1_spls = 1 - exp(log(binomial_coefficient(n-n1, trials_spls)) - log(binomial_coefficient(n, trials_spls)))
+  flog.info("Probability that 1 of the sPLS selected variables is part of the Vogelstein list by chance: %f", p1_spls)
+
+  # Probability of finding 1 of the selected genes being part of the TSG database
+  p2_mcia = 1 - exp(log(binomial_coefficient(n-n2, trials_mcia)) - log(binomial_coefficient(n, trials_mcia)))
+  flog.info("Probability that 1 of the MCIA selected variables is part of the Tumor Suppresor Gene Database by chance: %f", p2_mcia)
+  p2_spls = 1 - exp(log(binomial_coefficient(n-n2, trials_spls)) - log(binomial_coefficient(n, trials_spls)))
+  flog.info("Probability that 1 of the sPLS selected variables is part of the Tumor Suppresor Gene Database by chance: %f", p2_spls)
+
+  # Approximation of the probability of finding N of the selected genes being part of the Vogelstein list
+  p1_n_mcia = p1_mcia^length(intersect_mcia_vogelstein)
+  flog.info("MCIA selected genes contains %d genes in the Vogelstein list", length(intersect_mcia_vogelstein))
+  flog.info("Probability that %d of the MCIA selected variables is part of the Vogelstein list by chance: %f", length(intersect_mcia_vogelstein), p1_n_mcia)
+  p1_n_spls = p1_spls^length(intersect_spls_vogelstein)
+  flog.info("sPLS selected genes contains %d genes in the Vogelstein list", length(intersect_spls_vogelstein))
+  flog.info("Probability that %d of the sPLS selected variables is part of the Vogelstein list by chance: %f", length(intersect_spls_vogelstein), p1_n_spls)
+
+  # Approximation of the probability of finding N of the selected genes being part of the TSG database
+  p2_n_mcia = p2_mcia^length(intersect_mcia_tsgdb)
+  flog.info("MCIA selected genes contains %d genes in the Tumor Suppressor Gene Database", length(intersect_mcia_tsgdb))
+  flog.info("Probability that %d of the MCIA selected variables is part of the Tumor Suppressor Gene Database by chance: %f", length(intersect_mcia_tsgdb), p2_n_mcia)
+  p2_n_spls = p2_spls^length(intersect_spls_tsgdb)
+  flog.info("sPLS selected genes contains %d genes in the Tumor Suppressor Gene Database", length(intersect_spls_tsgdb))
+  flog.info("Probability that %d of the sPLS selected variables is part of the Tumor Suppressor Gene Database by chance: %f", length(intersect_spls_tsgdb), p2_n_spls)
+
+  attributes = c("Total number of genes evaluated",
+                 "No. of selected variables by MCIA",
+                 "No. of selected variables by sPLS",
+                 "No. of genes in the Vogelstein list",
+                 "No. of genes in the Tumor Suppressor Gene Database",
+                 "No. of MCIA matches in the Vogelstein list",
+                 "No. of sPLS matches in the Vogelstein list",
+                 "No. of MCIA matches in the Tumor Suppressor Gene Database",
+                 "No. of sPLS matches in the Tumor Suppressor Gene Database",
+                 "Probability of finding 1 match on MCIA selected genes on the Vogelstein list",
+                 "Probability of finding 1 match on sPLS selected genes on the Vogelstein list",
+                 "Probability of finding 1 match on MCIA selected genes on the Tumor Suppressor Gene Database",
+                 "Probability of finding 1 match on sPLS selected genes on the Tumor Suppressor Gene Database",
+                 "Probability of finding N matches on MCIA selected genes on the Vogelstein list",
+                 "Probability of finding N matches on sPLS selected genes on the Vogelstein list",
+                 "Probability of finding N matches on MCIA selected genes on the Tumor Suppressor Gene Database",
+                 "Probability of finding N matches on sPLS selected genes on the Tumor Suppressor Gene Database"
+                 )
+  values = c(length(gene_universe),
+             length(mcia_results$selected_variables),
+             length(spls_results$selected_variables),
+             length(intersect_vogelstein_geneuniverse),
+             length(intersect_tsgdb_geneuniverse),
+             length(intersect_mcia_vogelstein),
+             length(intersect_spls_vogelstein),
+             length(intersect_mcia_tsgdb),
+             length(intersect_spls_tsgdb),
+             p1_mcia,
+             p1_spls,
+             p2_mcia,
+             p2_spls,
+             p1_n_mcia,
+             p1_n_spls,
+             p2_n_mcia,
+             p2_n_spls
+             )
+
+  write.table(data.frame(attribute=attributes, value=values), file = paste(output_dir, "results_evaluation.txt", sep="/"), quote=F, row.names=F, sep = "\t")
+
+  flog.info("Results evaluation finished.")
 }
 
 
 ###
 ### Functional analysis
 ###
-functional.analysis <- function (spls.results, mcia.results)
+functional_analysis <- function (spls_results, mcia_results)
 {
 
   # Loads ensembl biomart for Homo sapiens
@@ -82,8 +148,8 @@ functional.analysis <- function (spls.results, mcia.results)
   oncogenes_and_tsg = read.csv("./data/oncogenes_and_tsg.processed.txt", sep="\t")
 
   # get entrezid gene list from genes (it loses one gene on conversion, I guess it is "C11orf75")
-  mcia_selected_variables_entrezid = query_biomart(attributes=c("entrezgene"), filters=c("hgnc_symbol"), values=mcia.results$selected_variables)[, 1]
-  spls_selected_variables_entrezid = query_biomart(attributes=c("entrezgene"), filters=c("hgnc_symbol"), values=spls.results$selected_variables)[, 1]
+  mcia_selected_variables_entrezid = query_biomart(attributes=c("entrezgene"), filters=c("hgnc_symbol"), values=mcia_results$selected_variables)[, 1]
+  spls_selected_variables_entrezid = query_biomart(attributes=c("entrezgene"), filters=c("hgnc_symbol"), values=spls_results$selected_variables)[, 1]
   oncogenes_and_tsg_entrezid = query_biomart(attributes=c("entrezgene"), filters=c("hgnc_symbol"), values=oncogenes_and_tsg$Gene.Symbol)[, 1]
 
   # Compute enrichment analysis on Reactome
@@ -124,7 +190,7 @@ functional.analysis <- function (spls.results, mcia.results)
   # Plots enrichment for MCIA results
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/Wang",
                    method = "Wang",
@@ -132,7 +198,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/binary",
                    method = "binary",
@@ -141,7 +207,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/binary_gene_list",
                    method = "binary",
@@ -150,7 +216,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/binary_uniprot",
                    method = "binary",
@@ -159,7 +225,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/UI",
                    method = "UI",
@@ -168,7 +234,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/UI_gene_list",
                    method = "UI",
@@ -177,7 +243,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/UI_uniprot",
                    method = "UI",
@@ -186,7 +252,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/bray-curtis",
                    method = "bray-curtis",
@@ -195,7 +261,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/bray-curtis_gene_list",
                    method = "bray-curtis",
@@ -204,7 +270,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/bray-curtis_uniprot",
                    method = "bray-curtis",
@@ -213,7 +279,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/cosine",
                    method = "cosine",
@@ -222,7 +288,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/cosine_gene_list",
                    method = "cosine",
@@ -231,7 +297,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/cosine_uniprot",
                    method = "cosine",
@@ -240,7 +306,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/Resnik",
                    method = "Resnik",
@@ -248,7 +314,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/Lin",
                    method = "Lin",
@@ -256,7 +322,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/Rel",
                    method = "Rel",
@@ -264,7 +330,7 @@ functional.analysis <- function (spls.results, mcia.results)
                    ont=ONTOLOGY)
 
   cluster_and_plot(enrichment_results = mcia_go_enrichment,
-                   gene_list = mcia.results$selected_variables,
+                   gene_list = mcia_results$selected_variables,
                    TopGOdata = mcia_TopGOdata,
                    output_dir="results/GO_enrichment/MCIA/Jiang",
                    method = "Jiang",
@@ -536,54 +602,54 @@ run.TCGAome <- function(tumor_types,
   # Downloads data for RNAseq and RPPA
   #matrices = get.data(c("BRCA", "OV"))
   # tumor_types = c("BRCA", "OV")
-  matrices = get.data(tumor_types)
+  matrices = get_tcga_data(tumor_types)
 
   # Preprocessing
-  preprocessed.matrices = preprocess.data(X=matrices$X, Y=matrices$Y, correlation.thr = 0.7)
+  preprocessed_matrices = preprocess_data(X=matrices$X, Y=matrices$Y, correlation.thr = 0.7)
 
   # Pre-analysis
-  descriptive.analysis(X=preprocessed.matrices$X, Y=preprocessed.matrices$Y, Z=matrices$Z)
+  descriptive_analysis(X=preprocessed_matrices$X, Y=preprocessed_matrices$Y, Z=matrices$Z)
 
   if (run_pca_analysis){
-    pca.analysis(X=preprocessed.matrices$X, Y=preprocessed.matrices$Y, Z=matrices$Z)
+    pca_analysis(X=preprocessed_matrices$X, Y=preprocessed_matrices$Y, Z=matrices$Z)
   } else {
     flog.info("Principal Component Analysis disabled.")
   }
 
   if (run_hclust_analysis){
-    hclust.analysis(X=preprocessed.matrices$X, Y=preprocessed.matrices$Y, Z=matrices$Z)
+    hclust_analysis(X=preprocessed_matrices$X, Y=preprocessed_matrices$Y, Z=matrices$Z)
   } else {
     flog.info("Hierarchichal clustering analysis disabled.")
   }
 
   # Runs MCIA
-  mcia.results = mcia.analysis(X = preprocessed.matrices$X, Y = preprocessed.matrices$Y, Z = matrices$Z, topN = topN, cia.nf = 5)
+  mcia_results = mcia_analysis(X = preprocessed_matrices$X, Y = preprocessed_matrices$Y, Z = matrices$Z, topN = topN, cia.nf = 5)
 
   # Runs sPLS
-  spls.results = spls.analysis(X = preprocessed.matrices$X, Y = preprocessed.matrices$Y, Z = matrices$Z, topN = topN, selection_method = spls_selection_method)
+  spls_results = spls_analysis(X = preprocessed_matrices$X, Y = preprocessed_matrices$Y, Z = matrices$Z, topN = topN, selection_method = spls_selection_method)
 
 
   # Runs RGCCA
   if (run_rgcca){
     library(RGCCA)
-    rgcca.results = rgcca.analysis(X=preprocessed.matrices$X, Y=preprocessed.matrices$Y, Z=matrices$Z)
+    rgcca_results = rgcca_analysis(X=preprocessed_matrices$X, Y=preprocessed_matrices$Y, Z=matrices$Z)
   } else {
     flog.info("Regularized Generalized Canonical Correlation Analysis disabled.")
   }
 
   # Runs rCCA
-  #preprocessed.matrices = preprocess.data(matrices$X, matrices$Y, correlation.thr = 0.5)
+  #preprocessed_matrices = preprocess.data(matrices$X, matrices$Y, correlation.thr = 0.5)
   if (run_rcca){
-    rcaa.results = rcaa.analysis(preprocessed.matrices$X, preprocessed.matrices$Y, Z=matrices$Z)
+    rcaa_results = rcaa_analysis(preprocessed_matrices$X, preprocessed_matrices$Y, Z=matrices$Z)
   } else {
     flog.info("Regularized Canonical Correlation Analysis disabled.")
   }
 
   # Evaluates results
-  results.evaluation(mcia.results = mcia.results, spls.results = spls.results)
+  results_evaluation(mcia_results = mcia_results, spls_results = spls_results)
 
   # Performs pathway enrichment analysis
-  functional.analysis(mcia.results = mcia.results, spls.results = spls.results)
+  functional_analysis(mcia_results = mcia_results, spls_results = spls_results)
 
 
   ###

@@ -1,7 +1,7 @@
 ###
 ## Dataset descriptive analysis
 ###
-descriptive.analysis <- function(X, Y, Z){
+descriptive_analysis <- function(X, Y, Z){
 
   flog.info("Running descriptive analysis...")
 
@@ -17,7 +17,7 @@ descriptive.analysis <- function(X, Y, Z){
 ###
 ## Principal Component Analysis
 ###
-pca.analysis <- function(X, Y, Z){
+pca_analysis <- function(X, Y, Z){
 
   flog.info("Running PCA analysis...")
 
@@ -48,7 +48,7 @@ pca.analysis <- function(X, Y, Z){
 ###
 ## Hierarchical clustering
 ###
-hclust.analysis <- function(X, Y, Z){
+hclust_analysis <- function(X, Y, Z){
 
   flog.info("Running hierarchical clustering analysis...")
 
@@ -69,7 +69,7 @@ hclust.analysis <- function(X, Y, Z){
 ###
 ### Regularized Canonical COrrelation Analysis (rCCA)
 ###
-rcaa.analysis <- function(X, Y, Z)
+rcaa_analysis <- function(X, Y, Z)
 {
   flog.info("Running Regularized Canonical Correlation Analysis (rCCA)...")
 
@@ -106,7 +106,7 @@ rcaa.analysis <- function(X, Y, Z)
 ###
 ## Regularized Generalized CCA
 ###
-rgcca.analysis <- function (X, Y, Z)
+rgcca_analysis <- function (X, Y, Z)
 {
   flog.info("Running Regularized Generalized Canonical Correlation Analysis (RGCCA)...")
 
@@ -122,7 +122,7 @@ rgcca.analysis <- function (X, Y, Z)
 ###
 ### Sparse Partial Least Squares (sPLS)
 ###
-spls.analysis <- function(X, Y, Z, topN=5, selection_method="loadings")
+spls_analysis <- function(X, Y, Z, topN=5, selection_method="loadings")
 {
 
   flog.info("Running sparse Partial Least Squares (sPLS) analysis...")
@@ -230,7 +230,7 @@ spls.analysis <- function(X, Y, Z, topN=5, selection_method="loadings")
 ###
 ### Co-Inertia Analysis
 ###
-mcia.analysis <- function(X, Y, Z, topN=5, cia.nf=5)
+mcia_analysis <- function(X, Y, Z, topN=5, cia.nf=5)
 {
 
   flog.info("Running Multiple Co-Inertia Analysis (MCIA) ...")
@@ -280,6 +280,8 @@ mcia.analysis <- function(X, Y, Z, topN=5, cia.nf=5)
 
   # Plots selected variables
   mcia_plot_variables(mcia_result, selected_variables, output_dir=output_dir, file_name="topN.variables.png")
+
+  # TODO: plot 3rd dimension
 
   # Removes the suffix that identifies a variable as gene or protein before writing
   selected_variables = gsub("\\.df.", "", selected_variables)

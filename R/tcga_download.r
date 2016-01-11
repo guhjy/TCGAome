@@ -1,7 +1,7 @@
 ###
 ## Dataset download and preparation
 ###
-get.data <- function (tumor_types)
+get_tcga_data <- function (tumor_types)
 {
   flog.info("Starting download for tumor types: %s", paste(tumor_types, collapse=", "))
   firehose_datasets = getFirehoseDatasets()
