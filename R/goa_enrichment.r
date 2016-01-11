@@ -8,21 +8,23 @@
 # Gene Ontology Annotations for Human genes and for all Uniprot. No electronically inferred annotations (IEA)
 GOA_HUMAN_ANNOTATIONS_URL = "http://geneontology.org/gene-associations/gene_association.goa_human.gz"
 GOA_UNIPROT_ANNOTATIONS_URL = "http://geneontology.org/gene-associations/gene_association.goa_uniprot_noiea.gz"
-GOA_ANNOTATIONS_FOLDER = "data/GO/GOA/"
+GOA_ANNOTATIONS_FOLDER = get_package_folder("inst/GO/GOA/")
 
 # Reads GOA resource
 read_raw_goa <- function(search_universe="human")
 {
+  dir.create(GOA_ANNOTATIONS_FOLDER, recursive=T)
   if (search_universe == "human"){
     if (! exists("human_goa_raw"))
     {
       file = basename(GOA_HUMAN_ANNOTATIONS_URL)
       file = paste(GOA_ANNOTATIONS_FOLDER, file, sep="")
       download.file(GOA_HUMAN_ANNOTATIONS_URL, file)
-      human_goa_raw <<- read.table(file, header = F, comment.char = "!", sep="\t", stringsAsFactors=FALSE)
+      human_goa_raw <<- read.table(file, header = F, comment.char = "!", sep="\t", stringsAsFactors=FALSE, fill = TRUE)
       human_goa_raw <<- human_goa_raw[ , c(3,5)]
-      colnames(human_goa_raw) = c("Gene", "GO")
+      #colnames(human_goa_raw) = c("Gene", "GO")
     }
+    colnames(human_goa_raw) = c("Gene", "GO")
     goa_raw <<- human_goa_raw
   } else if (search_universe == "uniprot") {
     if (! exists("uniprot_goa_raw"))
@@ -32,8 +34,9 @@ read_raw_goa <- function(search_universe="human")
       download.file(GOA_UNIPROT_ANNOTATIONS_URL, file)
       uniprot_goa_raw <<- read.table(file, header = F, comment.char = "!", sep="\t", stringsAsFactors=FALSE, fill=TRUE)
       uniprot_goa_raw <<- uniprot_goa_raw[ , c(3,5)]
-      colnames(uniprot_goa_raw) = c("Gene", "GO")
+      #colnames(uniprot_goa_raw) = c("Gene", "GO")
     }
+    colnames(uniprot_goa_raw) = c("Gene", "GO")
     goa_raw <<- uniprot_goa_raw
   }
 
@@ -68,7 +71,7 @@ prepare_goa_annotations <- function()
 }
 
 # Returns the semantic similarity score between the two terms
-get_semantic_similarity <- function(term1, term2, measure = "Wang", gene_list = NULL, ont="BP")
+get_semantic_similarity <- function(term1, term2, measure = "Wang", gene_list = NULL, ont="BP", search_universe = NULL)
 {
   res <- try(mgoSim(term1, term2, organism="human", measure = measure, ont=ont),silent = TRUE)
   if (class(res) == "try-error"){
@@ -127,8 +130,10 @@ get_goa_size <- function(go_term, search_universe="human")
 
 # Calculates the enriched GO terms for a list of genes based on GOA
 # Uses the Fisher test provided by TopGO
-get_go_enrichment  <- function (gene_list, pvalue_threshold=0.01, ontology="BP")
+get_go_enrichment  <- function (gene_list, pvalue_threshold=0.01, ontology="BP", multiple_test_adjustment = FALSE)
 {
+  flog.info("Computes GO enrichment")
+
   # Prepares data
   geneID2GO <- readMappings(file = prepare_goa_annotations())
   geneNames <- names(geneID2GO)
@@ -154,23 +159,35 @@ get_go_enrichment  <- function (gene_list, pvalue_threshold=0.01, ontology="BP")
               #classicKS = resultKS, #elimKS = resultKS.elim,
               orderBy = "classicFisher", ranksOf = "classicFisher", topNodes = length(names(resultFisher@score)))
 
-  # Multiple test correction
-  results$qvalue = p.adjust(results$classicFisher, method = "fdr")
 
+
+  if (multiple_test_adjustment){
+    # Multiple test correction
+    results$pvalue = p.adjust(results$classicFisher, method = "fdr")
+  } else {
+    results$pvalue = results$classicFisher
+  }
   # removes not significant results (keeps those significant)
-  results = results[results$qvalue <= pvalue_threshold, ]
+  results = results[results$pvalue <= pvalue_threshold, ]
+
+  flog.info("Finished computing GO enrichment")
+
+  flog.info("Computes size of GO terms, based on Uniprot-GOA annotations")
+  # Calculates frequency (size) of GO terms according to GOA (we use the whole uniprot to calculate size)
+  sizes = as.vector(sapply(as.character(results$GO.ID), FUN = get_goa_size))
+  flog.info("Finished computing size of GO terms")
 
   # Returns results
   list(
     TopGOdata = GOdata,
     data.frame = data.frame(
       GO=as.character(results$GO.ID),
-      pvalue=results$classicFisher,
-      qvalue=results$qvalue,
+      pvalue=results$pvalue,
       name=results$Term,
       annotated_genes=results$Annotated,
       found_genes=results$Significant,
       expected_genes=results$Expected,
+      size = sizes,
       row.names=NULL,
       stringsAsFactors = F)
     )
@@ -227,7 +244,7 @@ pam_clustering <- function(distance){
 
 # MDS
 multidimensional_scaling <- function(distance){
-  fit <- cmdscale(go_distance, eig = TRUE, k = 2)
+  fit <- cmdscale(distance, eig = TRUE, k = 2)
   x <- fit$points[, 1]
   if (dim(fit$points)[2] > 1){
     y = fit$points[, 2]
@@ -255,6 +272,7 @@ cluster_and_plot <- function (enrichment_results, gene_list, TopGOdata, method="
     #enrichment_results = enrichment_results[enrichment_results$size <= frequency_threshold, ]
 
     # Obtains the distance matrix between terms
+    flog.info("Computing pairwise distance matrix on enriched GO terms with method %s", method)
     if (search_universe %in% c("human", "uniprot")){
       go_distance = go_distance_matrix(enrichment_results, measure = method, ont=ont, search_universe=search_universe)
     } else if (search_universe == "gene_list") {
@@ -262,8 +280,10 @@ cluster_and_plot <- function (enrichment_results, gene_list, TopGOdata, method="
       # only applicable to binary, UI, Bray-Curtis and cosine distances
       go_distance = go_distance_matrix(enrichment_results, measure = method, gene_list = gene_list, ont=ont)
     }
+    flog.info("Finished computing distances")
 
     # Clustering
+    flog.info("Computing clustering on enriched GO terms with method %s", clustering_method)
     if (clustering_method == "hclust"){
       clusters = hclust_clustering(go_distance, distance_threshold)
     } else if (clustering_method == "pam"){
@@ -271,16 +291,18 @@ cluster_and_plot <- function (enrichment_results, gene_list, TopGOdata, method="
     } else {
       stop ("Clustering method not supported")
     }
+    flog.info("Finished computing clustering")
 
     # Select cluster representatives
+    flog.info("Selection of cluster representatives")
     for (cluster in unique(sort(clusters))){
       group = names(clusters)[clusters %in% cluster]
       # Selects as the cluster representative the most significantly associated term with a frequency <= 5% if any
-      candidates = enrichment_results[enrichment_results$GO %in% group & enrichment_results$size <= frequency_threshold, c("qvalue")]
+      candidates = enrichment_results[enrichment_results$GO %in% group & enrichment_results$size <= frequency_threshold, c("pvalue")]
       if (length(candidates)==0){
-        representative_idx = which.min(enrichment_results[enrichment_results$GO %in% group, c("qvalue")])
+        representative_idx = which.min(enrichment_results[enrichment_results$GO %in% group, c("pvalue")])
       } else {
-        representative_idx = which.min(enrichment_results[enrichment_results$GO %in% group & enrichment_results$size <= frequency_threshold, c("qvalue")])
+        representative_idx = which.min(enrichment_results[enrichment_results$GO %in% group & enrichment_results$size <= frequency_threshold, c("pvalue")])
       }
       enrichment_results[enrichment_results$GO %in% group, c("cluster")] = group[representative_idx]
       enrichment_results[enrichment_results$GO %in% group, c("cluster_name")] = enrichment_results[enrichment_results$GO == group[representative_idx], c("name")]
@@ -288,6 +310,7 @@ cluster_and_plot <- function (enrichment_results, gene_list, TopGOdata, method="
     cluster_representatives = enrichment_results[enrichment_results$GO == enrichment_results$cluster, ]
 
     # Multi Dimensional Scaling on all terms
+    flog.info("Computing Multi Dimensional Scaling")
     mds_results = multidimensional_scaling(go_distance)
     enrichment_results = cbind(enrichment_results, mds_results$x)
     enrichment_results = cbind(enrichment_results, mds_results$y)
@@ -296,30 +319,35 @@ cluster_and_plot <- function (enrichment_results, gene_list, TopGOdata, method="
     write.table(enrichment_results, file=paste(output_dir, "enrichment_results.txt", sep="/"), sep="\t", quote = F, row.names = F)
 
     # Stores Euclidean distance to centroid to evaluate dispersion
-    avg_x = mean(x)
-    avg_y = mean(y)
-    distances_to_centroid = sqrt((x-avg_x)^2 + (y-avg_y)^2)
+    avg_x = mean(mds_results$x)
+    avg_y = mean(mds_results$y)
+    distances_to_centroid = sqrt((mds_results$x-avg_x)^2 + (mds_results$y-avg_y)^2)
     write.table(data.frame(GO=names(distances_to_centroid), distance_to_centroid=distances_to_centroid), file=paste(output_dir, "distances_to_centroid.txt", sep="/"), sep="\t", quote = F, row.names = F)
 
     # Multi Dimensional Scaling just on clusters
     go_distance_m = as.matrix(go_distance)
     cluster_distance = as.dist(go_distance_m[rownames(go_distance_m) %in% cluster_representatives$GO, colnames(go_distance_m) %in% cluster_representatives$GO])
     mds_results = multidimensional_scaling(cluster_distance)
-    cluster_representatives = cbind(cluster_representatives, mds_results$x)
-    cluster_representatives = cbind(cluster_representatives, mds_results$y)
+    x = mds_results$x
+    y = mds_results$y
+    cluster_representatives = cbind(cluster_representatives, x)
+    cluster_representatives = cbind(cluster_representatives, y)
+
+    flog.info("Finished MDS")
 
     # Stores the results of clustering and MDS on representatives
     write.table(cluster_representatives, file=paste(output_dir, "cluster_representatives.txt", sep="/"), sep="\t", quote = F, row.names = F)
 
     # Plots
+    flog.info("Plots functional analysis results")
     plot_scatter(cluster_representatives, output_dir)
     plot_table(cluster_representatives = cluster_representatives, output_dir)
     plot_treemap(enrichment_results = enrichment_results, output_dir)
     plot_graph(cluster_representatives = cluster_representatives, GOdata = TopGOdata, output_dir)
+    flog.info("Finished plotting")
 
   } else {
     # by default runs Wang semantic similarity
     stop("Non supported method.")
   }
-
 }

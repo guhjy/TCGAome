@@ -29,14 +29,14 @@ plot_scatter <-function(cluster_representatives, output_dir)
   file_path = paste(output_dir, "GO_scatterplot.png", sep = "/")
 
   # Plot GO terms
-  go_viz_names <- c("term_ID", "name", "plot_X","plot_Y","relative_size","qvalue", "annotated_genes", "found_genes", "expected_genes")
+  go_viz_names <- c("term_ID", "name", "plot_X","plot_Y","relative_size","pvalue", "annotated_genes", "found_genes", "expected_genes")
   go_viz_data <- cbind(
     cluster_representatives$GO,
     cluster_representatives$name,
     cluster_representatives$x,
     cluster_representatives$y,
     cluster_representatives$size,
-    cluster_representatives$qvalue,
+    cluster_representatives$pvalue,
     cluster_representatives$annotated_genes,
     cluster_representatives$found_genes,
     cluster_representatives$expected_genes
@@ -46,24 +46,24 @@ plot_scatter <-function(cluster_representatives, output_dir)
   go_viz_data$plot_X <- as.numeric( as.character(go_viz_data$plot_X) );
   go_viz_data$plot_Y <- as.numeric( as.character(go_viz_data$plot_Y) );
   go_viz_data$relative_size <- as.numeric( as.character(go_viz_data$relative_size) );
-  go_viz_data$qvalue <- as.numeric( as.character(go_viz_data$qvalue) );
+  go_viz_data$pvalue <- as.numeric( as.character(go_viz_data$pvalue) );
 
   Cairo(file= file_path, type="png", units="in", width=10, height=7, pointsize=12, dpi=600)
   print({
     p1 <- ggplot( data = go_viz_data );
-    p1 <- p1 + geom_point( aes( plot_X, plot_Y, colour = qvalue, size = relative_size), alpha = I(0.6) )
+    p1 <- p1 + geom_point( aes( plot_X, plot_Y, colour = pvalue, size = relative_size), alpha = I(0.6) )
     p1 <- p1 + scale_colour_gradientn( "Significance",  colours = c("red", "green"))
     p1 <- p1 + geom_point( aes(plot_X, plot_Y, size = relative_size), shape = 21, fill = "transparent", colour = I (alpha ("black", 0.6) ))
     p1 <- p1 + scale_size("Frequency", range=c(5, 20), breaks = c(0.00, 0.02, 0.04), labels = c("0%", "2%", "4%"))
     p1 <- p1 + geom_text(
-      data = go_viz_data [ go_viz_data$qvalue < 0.01, ],
+      data = go_viz_data [ go_viz_data$pvalue < 0.01, ],
       aes(
         plot_X,
         plot_Y,
         label = paste(paste(term_ID, paste(round(relative_size*100, 2), "%"), sep=", "), paste(expected_genes, found_genes, sep=" / "), sep=", ")),
       colour = I(alpha("black", 0.85)),
       size = 3,
-      nudge_y = -0.04, check_overlap = F);
+      nudge_y = -0.01, check_overlap = F);
     p1 <- p1 + labs (y = "Y", x = "X");
     p1 <- p1 + theme(legend.key = element_blank()) ;
     one.x_range = max(go_viz_data$plot_X) - min(go_viz_data$plot_X);
@@ -82,9 +82,9 @@ plot_table <- function(cluster_representatives, output_dir){
 
   file_path = paste(output_dir, "GO_terms.png", sep = "/")
 
-  cluster_representatives_aux = cluster_representatives[ , c("GO", "name", "qvalue", "size", "expected_genes", "found_genes")]
+  cluster_representatives_aux = cluster_representatives[ , c("GO", "name", "pvalue", "size", "expected_genes", "found_genes")]
   cluster_representatives_aux$size = paste(round(cluster_representatives_aux$size*100, 2), "%")
-  cluster_representatives_aux$qvalue = round(cluster_representatives_aux$qvalue, 4)
+  cluster_representatives_aux$pvalue = round(as.numeric(cluster_representatives_aux$pvalue), 4)
 
   base_size = 9
   ttheme = ttheme_default(
