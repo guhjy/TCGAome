@@ -15,7 +15,7 @@ get_tcga_data <- function (tumor_types)
   Y = NULL
   Z = NULL
 
-  tumor_types = c("BRCA", "OV")
+  #tumor_types = c("BRCA", "OV")
 
   for (tumor_type in tumor_types)
   {
