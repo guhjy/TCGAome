@@ -212,7 +212,7 @@ spls_analysis <- function(X, Y, Z, topN=5, selection_method="loadings")
     X_selected_variables = union(X_top_loadings_comp1, union(X_top_loadings_comp2, X_top_loadings_comp3))
     Y_selected_variables = union(Y_top_loadings_comp1, union(Y_top_loadings_comp2, Y_top_loadings_comp3))
   }
-  selected_variables = union(X_selected, Y_selected)  # avoids genes identified in both datasets
+  selected_variables = union(X_selected_variables, Y_selected_variables)  # avoids genes identified in both datasets
 
   # Writes selected variables
   write.table(X_selected_variables, file = paste(output_dir, "RNAseq_selected_variables.txt", sep="/"), quote=F, row.names=F, sep = "\t")
@@ -247,8 +247,8 @@ mcia_analysis <- function(X, Y, Z, topN=5, cia.nf=5)
 
   # Extracts Co-Inertia plot coords
   coinertia_variable_coords = mcia_result$mcoa$axis
-  coinertia_X_variable_coords = coinertia_variable_coords[grep("\\.df1", row.names(variable_coinertia_coords)), ]
-  coinertia_Y_variable_coords = coinertia_variable_coords[grep("\\.df2", row.names(variable_coinertia_coords)), ]
+  coinertia_X_variable_coords = coinertia_variable_coords[grep("\\.df1", row.names(coinertia_variable_coords)), ]
+  coinertia_Y_variable_coords = coinertia_variable_coords[grep("\\.df2", row.names(coinertia_variable_coords)), ]
   coinertia_X_variable_coords$variable = gsub("\\.df.", "", row.names(coinertia_X_variable_coords))
   coinertia_Y_variable_coords$variable = gsub("\\.df.", "", row.names(coinertia_Y_variable_coords))
   write.table(coinertia_X_variable_coords, file = paste(output_dir, "coinertia_plot_X_variables_coords.txt", sep="/"), quote=F, row.names=F, sep = "\t")
@@ -293,5 +293,5 @@ mcia_analysis <- function(X, Y, Z, topN=5, cia.nf=5)
 
   flog.info("MCIA finished.")
 
-  list(results=mcia_result, selected_variables=selected_variables, selected_genes=mcia_selected_genes, selected_proteins=mcia_selected_proteins)
+  list(results=mcia_result, selected_variables=selected_variables, selected_genes=X_selected_variables, selected_proteins=Y_selected_variables)
 }

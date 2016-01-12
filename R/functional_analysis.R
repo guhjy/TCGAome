@@ -32,16 +32,10 @@ functional_analysis <- function (spls_results, mcia_results,
 
   flog.info("Functional analysis starting ...")
 
-  if (GO_similarity_measure %in% c("binary", "UI", "cosine", "bray-curtis")){
-    subfolder = paste(GO_similarity_measure, GOA_search_universe, sep="_")
-  } else {
-    subfolder = GO_similarity_measure
-  }
-
   flog.info("... on MCIA results ...")
 
   # Runs functional analysis on MCIA results
-  output_dir = paste(RESULTS_FOLDER, paste("MCIA/functional_analysis", subfolder, sep="/"), sep="/")
+  output_dir = paste(RESULTS_FOLDER, "MCIA/functional_analysis", sep="/")
   dir.create(output_dir, recursive=T)
 
   # Calculates GO enrichment for MCIA
@@ -76,7 +70,7 @@ functional_analysis <- function (spls_results, mcia_results,
   flog.info("... on sPLS results ...")
 
   # Runs functional analysis on sPLS results
-  output_dir = paste(RESULTS_FOLDER, paste("sPLS/functional_analysis", subfolder, sep="/"), sep="/")
+  output_dir = paste(RESULTS_FOLDER, "sPLS/functional_analysis", sep="/")
   dir.create(output_dir, recursive=T)
 
   # Calculates GO enrichment for MCIA
