@@ -124,22 +124,6 @@ results_evaluation <- function(spls_results, mcia_results)
 
 
 
-plot_venn <- function(set1, set2, set3, labels){
-
-
-  print({
-    draw.triple.venn(area1 = length(set1),
-                     area2 = length(set2),
-                     area3 = length(set3),
-                     n12 = length(intersect(set1, set2)),
-                     n23 = length(intersect(set2, set3)),
-                     n13 = length(intersect(set1, set3)),
-                     n123 = length(intersect(set1, intersect(set2, set3))),
-                     category = labels, lty = "blank",
-                     fill = c(red500, green500, indigo500))
-  })
-}
-
 
 #' Runs the TCGAome analysis pipeline on the given tumor types.
 #' @param tumor_types Vector of tumor types to be analyzed from those available at TCGA (run RTCGAToolbox::getFirehoseDatasets() to see all available types)
@@ -173,9 +157,6 @@ run_TCGAome <- function(tumor_types,
                         multiple_test_adjustment = FALSE
                         ){
 
-  # Loads bioconductor packages
-  loads_dependencies()
-
   # Creates and sets the results folder for the current run
   RESULTS_FOLDER <<- get_results_folder()
 
@@ -185,8 +166,6 @@ run_TCGAome <- function(tumor_types,
   flog.info("Results directory: %s", RESULTS_FOLDER)
 
   # Downloads data for RNAseq and RPPA
-  #matrices = get.data(c("BRCA", "OV"))
-  # tumor_types = c("BRCA", "OV")
   matrices = get_tcga_data(tumor_types)
 
   # Preprocessing
