@@ -1,7 +1,7 @@
 Package: TCGAome
 Title: MultiOmics (just RNAseq and RPPA...) Data Analyzer on TCGA data
 Version: 0.0.0.9000
-Authors@R: person("Pablo", "Riesgo Ferreiro", email = "priesgoferreiro@gmail.com", role = c("aut", "cre"))
+Authors@R: person("Pablo", "Riesgo Ferreiro", email = "priesgo@uoc.edu", role = c("aut", "cre"))
 Description: The package downloads RNAseq, RPPA and clinical TCGA datasets
     for a given set of tumor types, preprocess it, analyzes it with sPLS and MCIA
     and finally computes GO enrichment and visualizes enriched GO terms based on
