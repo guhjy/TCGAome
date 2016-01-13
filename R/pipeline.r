@@ -128,8 +128,8 @@ results_evaluation <- function(spls_results, mcia_results)
 #' @keywords TCGAome
 #' @export
 #' @examples
-#' get_TCGAome_tumos_types()
-get_TCGAome_tumos_types <- function(){
+#' get_TCGAome_tumor_types()
+get_TCGAome_tumor_types <- function(){
   names(RPPA_ANNOTATIONS)
 }
 
@@ -253,6 +253,10 @@ run_TCGAome <- function(tumor_types,
   #knit("File.Rmd")
   #markdownToHTML('File.md', 'File.html', options=c("use_xhml"))
   #system("pandoc -s File.html -o File.pdf")
+
+
+  flog.info("TCGAome finished!")
+  flog.info("Your results are at %s", RESULTS_FOLDER)
 }
 
 
