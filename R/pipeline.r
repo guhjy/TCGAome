@@ -123,6 +123,15 @@ results_evaluation <- function(spls_results, mcia_results)
 }
 
 
+#' Returns the supported tumor types.
+#'
+#' @keywords TCGAome
+#' @export
+#' @examples
+#' get_TCGAome_tumos_types()
+get_TCGAome_tumos_types <- function(){
+  names(RPPA_ANNOTATIONS)
+}
 
 
 #' Runs the TCGAome analysis pipeline on the given tumor types.
