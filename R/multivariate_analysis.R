@@ -202,13 +202,27 @@ spls_analysis <- function(X, Y, Z, topN=5, selection_method="loadings")
     Y_selected_variables = Y_coords[order(Y_coords$distance2origin, decreasing = T)[1:topN], ]$variable
   } else if (selection_method == "loadings"){
     # Selects top N variables with highest loadings, maximize variance in samples
-    # TODO: select topN t each component for positive vaues and for negative values separately
-    X_top_loadings_comp1 = gsub(".X", "", variable_loadings_comp1$X$name[1:topN])
-    Y_top_loadings_comp1 = gsub(".Y", "", variable_loadings_comp1$Y$name[1:topN])
-    X_top_loadings_comp2 = gsub(".X", "", variable_loadings_comp2$X$name[1:topN])
-    Y_top_loadings_comp2 = gsub(".Y", "", variable_loadings_comp2$Y$name[1:topN])
-    X_top_loadings_comp3 = gsub(".X", "", variable_loadings_comp3$X$name[1:topN])
-    Y_top_loadings_comp3 = gsub(".Y", "", variable_loadings_comp3$Y$name[1:topN])
+    # select topN t each component for positive vaues and for negative values separately
+    X_top_negative_loadings_comp1 = gsub(".X", "", variable_loadings_comp1$X$name[variable_loadings_comp1$X$value$value.var <  0][1:topN])
+    X_top_positive_loadings_comp1 = gsub(".X", "", variable_loadings_comp1$X$name[variable_loadings_comp1$X$value$value.var >= 0][1:topN])
+    Y_top_negative_loadings_comp1 = gsub(".Y", "", variable_loadings_comp1$Y$name[variable_loadings_comp1$Y$value <  0][1:topN])
+    Y_top_positive_loadings_comp1 = gsub(".Y", "", variable_loadings_comp1$Y$name[variable_loadings_comp1$Y$value >= 0][1:topN])
+    X_top_negative_loadings_comp2 = gsub(".X", "", variable_loadings_comp2$X$name[variable_loadings_comp2$X$value <  0][1:topN])
+    X_top_positive_loadings_comp2 = gsub(".X", "", variable_loadings_comp2$X$name[variable_loadings_comp2$X$value >= 0][1:topN])
+    Y_top_negative_loadings_comp2 = gsub(".Y", "", variable_loadings_comp2$Y$name[variable_loadings_comp2$Y$value <  0][1:topN])
+    Y_top_positive_loadings_comp2 = gsub(".Y", "", variable_loadings_comp2$Y$name[variable_loadings_comp2$Y$value >= 0][1:topN])
+    X_top_negative_loadings_comp3 = gsub(".X", "", variable_loadings_comp3$X$name[variable_loadings_comp3$X$value <  0][1:topN])
+    X_top_positive_loadings_comp3 = gsub(".X", "", variable_loadings_comp3$X$name[variable_loadings_comp3$X$value >= 0][1:topN])
+    Y_top_negative_loadings_comp3 = gsub(".Y", "", variable_loadings_comp3$Y$name[variable_loadings_comp3$Y$value <  0][1:topN])
+    Y_top_positive_loadings_comp3 = gsub(".Y", "", variable_loadings_comp3$Y$name[variable_loadings_comp3$Y$value >= 0][1:topN])
+
+    X_top_loadings_comp1 = union(X_top_negative_loadings_comp1, X_top_positive_loadings_comp1)
+    Y_top_loadings_comp1 = union(Y_top_negative_loadings_comp1, Y_top_positive_loadings_comp1)
+    X_top_loadings_comp2 = union(X_top_negative_loadings_comp2, X_top_positive_loadings_comp2)
+    Y_top_loadings_comp2 = union(Y_top_negative_loadings_comp2, Y_top_positive_loadings_comp2)
+    X_top_loadings_comp3 = union(X_top_negative_loadings_comp3, X_top_positive_loadings_comp3)
+    Y_top_loadings_comp3 = union(Y_top_negative_loadings_comp3, Y_top_positive_loadings_comp3)
+
     X_selected_variables = union(X_top_loadings_comp1, union(X_top_loadings_comp2, X_top_loadings_comp3))
     Y_selected_variables = union(Y_top_loadings_comp1, union(Y_top_loadings_comp2, Y_top_loadings_comp3))
   }
@@ -260,7 +274,7 @@ mcia_analysis <- function(X, Y, Z, topN=5, cia.nf=5)
   # PLot all results
   mcia_plot(mcia_result, phenotype=Z$Tumor_type, output_dir=output_dir, file_name="visualizations.png")
 
-  # Selects top N positive and negative associations at X and Y and plots them, that is a maximum of 4*3*N variables
+  # Selects top N positive and negative associations at X and Y and plots them, that is a maximum of 3*2*2*N variables
   selected_variables_1 = topVar(mcia_result, axis=1, topN = topN)
   X_selected_variables_1 = gsub("\\.df1", "", as.character(unlist(selected_variables_1[, 1:2])))
   Y_selected_variables_1 = gsub("\\.df2", "", as.character(unlist(selected_variables_1[, 3:4])))
