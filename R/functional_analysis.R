@@ -48,7 +48,7 @@ functional_analysis <- function (spls_results, mcia_results,
 
   if (dim(mcia_go_enrichment)[1] > 0) {
     write.table(mcia_go_enrichment, file = paste(output_dir, "go_enrichment.txt", sep="/"), sep="\t", row.names = F, quote = F)
-
+    flog.info("GO enrichment on MCIA selected genes returned %d enriched GO terms.", dim(mcia_go_enrichment)[1])
     # Plots enrichment for MCIA results
     cluster_and_plot(enrichment_results = mcia_go_enrichment,
                      gene_list = mcia_results$selected_variables,
@@ -83,7 +83,7 @@ functional_analysis <- function (spls_results, mcia_results,
 
   if (dim(spls_go_enrichment)[1] > 0) {
     write.table(spls_go_enrichment, file = paste(output_dir, "go_enrichment.txt", sep="/"), sep="\t", row.names = F, quote = F)
-
+    flog.info("GO enrichment on sPLS selected genes returned %d enriched GO terms.", dim(spls_go_enrichment)[1])
     # Plots enrichment for sPLS results
     cluster_and_plot(enrichment_results = spls_go_enrichment,
                      gene_list = spls_results$selected_variables,

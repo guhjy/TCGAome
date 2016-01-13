@@ -143,13 +143,13 @@ spls_analysis <- function(X, Y, Z, topN=5, selection_method="loadings")
   spls_result <- spls(as.matrix(X), as.matrix(Y), ncomp = 3, mode = 'regression')
 
   # plots the individuals
-  mixomics_plot_individuals(data=spls_result, names=Z$Tumor_type, output_dir=output_dir, file_name="samples.png")
+  try(mixomics_plot_individuals(data=spls_result, names=Z$Tumor_type, output_dir=output_dir, file_name="samples.png"), silent = T)
   # plots the variables
-  mixomics_plot_variables(spls_result, output_dir=output_dir, file_name="variables.png")
+  try(mixomics_plot_variables(spls_result, output_dir=output_dir, file_name="variables.png"), silent = T)
   # plots variables in a network
-  mixomics_plot_network(spls_result, output_dir=output_dir, file_name="network.png")
+  try(mixomics_plot_network(spls_result, output_dir=output_dir, file_name="network.png"), silent = T)
   # plots heatmap
-  mixomics_plot_heatmap(spls_result, output_dir=output_dir, file_name="heatmap.png")
+  try(mixomics_plot_heatmap(spls_result, output_dir=output_dir, file_name="heatmap.png"), silent = T)
 
   # Gets the coordinates of all variables in the correlation plot and calculates the distance to the origin
   X_coords = as.data.frame(cor(spls_result$X, spls_result$variates$X + spls_result$variates$Y, use = "pairwise"))
@@ -235,6 +235,9 @@ spls_analysis <- function(X, Y, Z, topN=5, selection_method="loadings")
 
   # TODO: plots selected variables
 
+  flog.info("%d variables selected from RNAseq on sPLS results.", length(X_selected_variables))
+  flog.info("%d variables selected from RPPA on sPLS results.", length(Y_selected_variables))
+  flog.info("%d variables selected on sPLS results.", length(selected_variables))
   flog.info("sPLS finished.")
 
   # return
@@ -272,7 +275,7 @@ mcia_analysis <- function(X, Y, Z, topN=5, cia.nf=5)
   write.table(coinertia_sample_coords, file = paste(output_dir, "coinertia_sample_coords.txt", sep="/"), quote=F, row.names=F, sep = "\t")
 
   # PLot all results
-  mcia_plot(mcia_result, phenotype=Z$Tumor_type, output_dir=output_dir, file_name="visualizations.png")
+  try(mcia_plot(mcia_result, phenotype=Z$Tumor_type, output_dir=output_dir, file_name="visualizations.png"), silent = T)
 
   # Selects top N positive and negative associations at X and Y and plots them, that is a maximum of 3*2*2*N variables
   selected_variables_1 = topVar(mcia_result, axis=1, topN = topN)
@@ -293,7 +296,7 @@ mcia_analysis <- function(X, Y, Z, topN=5, cia.nf=5)
   Y_selected_variables = union(Y_selected_variables_1, union(Y_selected_variables_2, Y_selected_variables_3))
 
   # Plots selected variables
-  mcia_plot_variables(mcia_result, selected_variables, output_dir=output_dir, file_name="topN.variables.png")
+  try(mcia_plot_variables(mcia_result, selected_variables, output_dir=output_dir, file_name="topN.variables.png"), silent = T)
 
   # TODO: plot 3rd dimension
 
@@ -305,6 +308,9 @@ mcia_analysis <- function(X, Y, Z, topN=5, cia.nf=5)
   write.table(Y_selected_variables, file = paste(output_dir, "RPPA_selected_variables.txt", sep="/"), quote=F, row.names=F, sep = "\t")
   write.table(selected_variables, file = paste(output_dir, "selected_variables.txt", sep="/"), quote=F, row.names=F, sep = "\t")
 
+  flog.info("%d variables selected from RNAseq on MCIA results.", length(X_selected_variables))
+  flog.info("%d variables selected from RPPA on MCIA results.", length(Y_selected_variables))
+  flog.info("%d variables selected on MCIA results.", length(selected_variables))
   flog.info("MCIA finished.")
 
   list(results=mcia_result, selected_variables=selected_variables, selected_genes=X_selected_variables, selected_proteins=Y_selected_variables)

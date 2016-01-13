@@ -366,10 +366,10 @@ cluster_and_plot <- function (enrichment_results, gene_list, TopGOdata, method="
 
       # Plots
       flog.info("Plots functional analysis results")
-      plot_scatter(cluster_representatives, output_dir)
-      plot_table(cluster_representatives = cluster_representatives, output_dir)
-      plot_treemap(enrichment_results = enrichment_results, output_dir)
-      plot_graph(cluster_representatives = cluster_representatives, GOdata = TopGOdata, output_dir)
+      try(plot_scatter(cluster_representatives, output_dir), silent=T)
+      try(plot_table(cluster_representatives = cluster_representatives, output_dir), silent=T)
+      try(plot_treemap(enrichment_results = enrichment_results, output_dir), silent=T)
+      try(plot_graph(cluster_representatives = cluster_representatives, GOdata = TopGOdata, output_dir), silent=T)
       flog.info("Finished plotting")
     }
   } else {

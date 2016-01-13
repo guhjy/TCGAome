@@ -271,15 +271,32 @@ mixomics_plot_network <- function(spls_result, output_dir, file_name){
 
   file_path = paste(output_dir, file_name, sep = "/")
 
+  # Gets the maximum correlation between any pair of variables from X and Y
+  #comp = 1:2
+  #keep.X = apply(abs(spls_result$loadings$X), 1, sum) > 0
+  #keep.Y = apply(abs(spls_result$loadings$Y), 1, sum) > 0
+  #row.names = spls_result$names$X
+  #col.names = spls_result$names$Y
+  #row.names = row.names[keep.X]
+  #col.names = col.names[keep.Y]
+  #if (spls_result$mode == "canonical") {
+  #  cord.X = cor(spls_result$X[, keep.X], spls_result$variates$X[, comp], use = "pairwise")
+  #  cord.Y = cor(spls_result$Y[, keep.Y], spls_result$variates$Y[, comp], use = "pairwise")
+  #}
+  #else {
+  #  cord.X = cor(spls_result$X[, keep.X], spls_result$variates$X[, comp], use = "pairwise")
+  #  cord.Y = cor(spls_result$Y[, keep.Y], spls_result$variates$X[, comp], use = "pairwise")
+  #}
+  #mat = cord.X %*% t(cord.Y)
+  correlation_threshold = 0.6 #min (0.6, max(abs(as.vector(t(mat)))))
+
   ## By setting keep.var = TRUE, we only display the variables selected by sPLS
   ## on dimensions 1 and 2
   color.edge <- colorRampPalette(c("darkgreen", "green", "yellow", "red", "darkred"))
   Cairo(file=file_path, type="png", units="in", width=10, height=7, pointsize=12, dpi=600)
   print({
-    #mixOmics::network(spls_result, comp = 1:2, keep.var = FALSE, shape.node = c("rectangle", "rectangle"),
-    #        color.node = c("white", "pink"), color.edge = color.edge(10), alpha = 3, threshold=0.6)
     mixOmics::network(spls_result, comp = 1:2, shape.node = c("rectangle", "rectangle"),
-             color.node = c("white", "pink"), color.edge = color.edge(10), threshold=0.6)
+             color.node = c("white", "pink"), color.edge = color.edge(10), threshold=correlation_threshold)
   })
   dev.off()
 
