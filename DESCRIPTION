@@ -7,7 +7,29 @@ Description: The package downloads RNAseq, RPPA and clinical TCGA datasets
     and finally computes GO enrichment and visualizes enriched GO terms based on
     semantic and functional distances between terms.
 Depends:
-    R (>= 3.2.3),futile.logger,ReactomePA,RTCGAToolbox,mixOmics,omicade4,reshape,biomaRt,topGO,GOSemSim,cluster,treemap,gridExtra,ggplot2,scales,grid,VennDiagram,ggbiplot,gplots,Cairo,dplyr,RGCCA
+    R (>= 3.2.3)
+Imports:
+    biomaRt,
+    Cairo,
+    cluster,
+    dplyr,
+    futile.logger,
+    ggbiplot,
+    ggplot2,
+    GOSemSim,
+    gplots,
+    grid,
+    gridExtra,
+    mixOmics,
+    omicade4,
+    RGCCA,
+    ReactomePA,
+    reshape,
+    RTCGAToolbox,
+    scales,
+    topGO,
+    treemap,
+    VennDiagram
 License: MIT
 LazyData: true
 RoxygenNote: 5.0.1.9000

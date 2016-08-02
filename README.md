@@ -30,24 +30,20 @@ For non default configuration:
 
 ## Installation
 
-On Linux systems you might need additional installation of some Cairo and RGL libs for the graphical output. On Ubuntu:
+### Dependencies
+
+On Linux systems you might need additional installation of some Cairo and RGL libs for the graphical output. 
+On Debian/Ubuntu/Mint/...:
 ```
 apt-get install libcairo2-dev
 apt-get install libxt-dev
 apt-get install libglu1-mesa-dev
 ```
-
-Many of TCGAome dependencies are not in the CRAN repository and they might require a previous manual installation from Bioconductor:
+On RHEL/Fedora/CentOS/...:
 ```
-source("http://bioconductor.org/biocLite.R")
-biocLite("omicade4")
-biocLite("mixOmics")
-biocLite("RGCCA")
-biocLite("GOSemSim")
-biocLite("RTCGAToolbox")
-biocLite("ReactomePA")
-biocLite("biomaRt")
-biocLite("topGO")
+yum install cairo-devel
+yum install libXt-devel
+yum install mesa-libGLU-devel
 ```
 
 Installs the R development tools:
@@ -61,8 +57,16 @@ Installs the ggbiplot package from GitHub:
 install_github("ggbiplot", "vqv")
 ```
 
+### TCGAome
+
 Install the TCGAome package from GitHub:
 ```
-install_github('TCGAome', 'priesgo')
+devtools::install_github('TCGAome', 'priesgo')
 ```
 
+or alternatively download the source code, install and load:
+```
+git clone https://github.com/priesgo/TCGAome.git
+devtools::install()
+devtools::load_all()
+```
