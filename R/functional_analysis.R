@@ -99,6 +99,7 @@ functional_analysis <- function (spls_results, mcia_results,
       flog.info("Try disabling multiple test adjustment.")
     }
   }
+
 }
 
 test <- function()
@@ -288,54 +289,55 @@ test <- function()
 
 
 # Evaluates the similarity measure and clustering results
-go_clustering_evaluation <- function (method){
+go_clustering_evaluation <- function (results_folder, method){
 
-  base_folder = "results/GO_enrichment"
+  #base_folder = "results/GO_enrichment"
+  base_folder = paste(paste(results_folder, method, sep="/"), "functional_analysis", sep="/")
 
   # Retrieves results for distance to centroid of each similarity metric
-  results_binary = read_clustering_results(paste(method, "binary", sep="/"), "binary")
+  results_binary = read_clustering_results(paste(base_folder, "binary", sep="/"), "binary")
   dist2centroid = results_binary$dist2centroid
 
-  results_UI = read_clustering_results(paste(method, "UI", sep="/"), "UI")
+  results_UI = read_clustering_results(paste(base_folder, "UI", sep="/"), "UI")
   dist2centroid = merge(dist2centroid, results_UI$dist2centroid)
 
-  results_BC = read_clustering_results(paste(method, "bray-curtis", sep="/"), "BC")
+  results_BC = read_clustering_results(paste(base_folder, "bray-curtis", sep="/"), "BC")
   dist2centroid = merge(dist2centroid, results_BC$dist2centroid)
 
-  results_cosine = read_clustering_results(paste(method, "cosine", sep="/"), "cosine")
+  results_cosine = read_clustering_results(paste(base_folder, "cosine", sep="/"), "cosine")
   dist2centroid = merge(dist2centroid, results_cosine$dist2centroid)
 
-  results_binary_intra = read_clustering_results(paste(method, "binary_gene_list", sep="/"), "binary_intra")
-  dist2centroid = merge(dist2centroid, results_binary_intra$dist2centroid)
+  #results_binary_intra = read_clustering_results(paste(method, "binary_gene_list", sep="/"), "binary_intra")
+  #dist2centroid = merge(dist2centroid, results_binary_intra$dist2centroid)
 
-  results_UI_intra = read_clustering_results(paste(method, "UI_gene_list", sep="/"), "UI_intra")
-  dist2centroid = merge(dist2centroid, results_UI_intra$dist2centroid)
+  #results_UI_intra = read_clustering_results(paste(method, "UI_gene_list", sep="/"), "UI_intra")
+  #dist2centroid = merge(dist2centroid, results_UI_intra$dist2centroid)
 
-  results_BC_intra = read_clustering_results(paste(method, "bray-curtis_gene_list", sep="/"), "BC_intra")
-  dist2centroid = merge(dist2centroid, results_BC_intra$dist2centroid)
+  #results_BC_intra = read_clustering_results(paste(method, "bray-curtis_gene_list", sep="/"), "BC_intra")
+  #dist2centroid = merge(dist2centroid, results_BC_intra$dist2centroid)
 
-  results_cosine_intra = read_clustering_results(paste(method, "cosine_gene_list", sep="/"), "cosine_intra")
-  dist2centroid = merge(dist2centroid, results_cosine_intra$dist2centroid)
+  #results_cosine_intra = read_clustering_results(paste(method, "cosine_gene_list", sep="/"), "cosine_intra")
+  #dist2centroid = merge(dist2centroid, results_cosine_intra$dist2centroid)
 
-  results_jiang = read_clustering_results(paste(method, "Jiang", sep="/"), "Jiang")
+  results_jiang = read_clustering_results(paste(base_folder, "Jiang", sep="/"), "Jiang")
   dist2centroid = merge(dist2centroid, results_jiang$dist2centroid)
 
-  results_lin = read_clustering_results(paste(method, "Lin", sep="/"), "Lin")
+  results_lin = read_clustering_results(paste(base_folder, "Lin", sep="/"), "Lin")
   dist2centroid = merge(dist2centroid, results_lin$dist2centroid)
 
-  results_rel = read_clustering_results(paste(method, "Rel", sep="/"), "Schliker")
+  results_rel = read_clustering_results(paste(base_folder, "Rel", sep="/"), "Schliker")
   dist2centroid = merge(dist2centroid, results_rel$dist2centroid)
 
-  results_resnik = read_clustering_results(paste(method, "Resnik", sep="/"), "Resnik")
+  results_resnik = read_clustering_results(paste(base_folder, "Resnik", sep="/"), "Resnik")
   dist2centroid = merge(dist2centroid, results_resnik$dist2centroid)
 
-  results_wang = read_clustering_results(paste(method, "Wang", sep="/"), "Wang")
+  results_wang = read_clustering_results(paste(base_folder, "Wang", sep="/"), "Wang")
   dist2centroid = merge(dist2centroid, results_wang$dist2centroid)
 
 
   # Plots boxplot
-  dist2centroid_pivot = melt(dist2centroid, id.vars='GO', measure.vars=names(dist2centroid)[2:14])
-  png(paste(paste(base_folder, method, sep="/"),"boxplot_dist2centroid.png", sep="/"))
+  dist2centroid_pivot = melt(dist2centroid, id.vars='GO', measure.vars=names(dist2centroid)[2:10])
+  png(paste(base_folder,"boxplot_dist2centroid.png", sep="/"))
   ggplot(dist2centroid_pivot, aes(x=variable, y=value)) +
     geom_boxplot() +
     xlab("Metric") +
@@ -351,10 +353,6 @@ go_clustering_evaluation <- function (method){
     get_clustering_metrics("UI", results_UI$data),
     get_clustering_metrics("BC", results_BC$data),
     get_clustering_metrics("cosine", results_cosine$data),
-    get_clustering_metrics("binary_intra", results_binary_intra$data),
-    get_clustering_metrics("UI_intra", results_UI_intra$data),
-    get_clustering_metrics("BC_intra", results_BC_intra$data),
-    get_clustering_metrics("cosine_intra", results_cosine_intra$data),
     get_clustering_metrics("Jiang", results_jiang$data),
     get_clustering_metrics("Lin", results_lin$data),
     get_clustering_metrics("Rel", results_rel$data),
@@ -364,7 +362,7 @@ go_clustering_evaluation <- function (method){
 
 
   # Plots barplot with number of clusters
-  png(paste(paste(base_folder, method, sep="/"),"count_clusters.png", sep="/"))
+  png(paste(base_folder,"count_clusters.png", sep="/"))
   ggplot(clustering_metrics, aes(x = factor(measure, levels=measure), y = clusters)) +
     geom_bar(stat = "identity", position=position_dodge(width = 0.9), width=0.5) +
     theme(axis.text.x  = element_text(angle=45, vjust=0.5)) +
@@ -376,7 +374,7 @@ go_clustering_evaluation <- function (method){
   clustering_metrics_pivot$value = as.numeric(clustering_metrics_pivot$value)
   clustering_metrics_pivot$measure = factor(clustering_metrics_pivot$measure, levels=clustering_metrics_pivot$measure)
 
-  png(paste(paste(base_folder, method, sep="/"),"descriptive_stats_clusters.png", sep="/"))
+  png(paste(base_folder,"descriptive_stats_clusters.png", sep="/"))
   ggplot(clustering_metrics_pivot, aes(x = measure, y = value, fill=factor(variable))) +
     geom_bar(stat = "identity", position=position_dodge(width = 0.9), width=0.5) +
     theme(axis.text.x  = element_text(angle=45, vjust=0.5)) +
@@ -394,52 +392,25 @@ go_clustering_evaluation <- function (method){
   resnik_set = unique(results_resnik$data$cluster)
 
   cosine_set = unique(results_cosine$data$cluster)
-  png(paste(paste(base_folder, method, sep="/"),"venn_cosine_wang_resnik.png", sep="/"),width=800,height=700, res=96)
-  plot_venn(wang_set, resnik_set, cosine_set, c("Wang", "Resnik", "Cosine"))
-  dev.off()
+  plot_triple_venn(wang_set, resnik_set, cosine_set, c("Wang", "Resnik", "Cosine"), base_folder, "venn_cosine_wang_resnik.png")
 
   UI_set = unique(results_UI$data$cluster)
-  png(paste(paste(base_folder, method, sep="/"),"venn_UI_wang_resnik.png", sep="/"),width=800,height=700, res=96)
-  plot_venn(wang_set, resnik_set, UI_set, c("Wang", "Resnik", "UI"))
-  dev.off()
+  plot_triple_venn(wang_set, resnik_set, UI_set, c("Wang", "Resnik", "UI"), base_folder, "venn_UI_wang_resnik.png")
 
-  binary_set = unique(results_binary$data$cluster)
-  png(paste(paste(base_folder, method, sep="/"),"venn_binary_wang_resnik.png", sep="/"),width=800,height=700, res=96)
-  plot_venn(wang_set, resnik_set, binary_set, c("Wang", "Resnik", "binary"))
-  dev.off()
+  plot_triple_venn(wang_set, resnik_set, binary_set, c("Wang", "Resnik", "binary"), base_folder, "venn_binary_wang_resnik.png")
 
   BC_set = unique(results_BC$data$cluster)
-  png(paste(paste(base_folder, method, sep="/"),"venn_BC_wang_resnik.png", sep="/"),width=800,height=700, res=96)
-  plot_venn(wang_set, resnik_set, BC_set, c("Wang", "Resnik", "BC"))
-  dev.off()
+  plot_triple_venn(wang_set, resnik_set, BC_set, c("Wang", "Resnik", "BC"), base_folder, "venn_BC_wang_resnik.png")
 
-  cosine_intra_set = unique(results_cosine_intra$data$cluster)
-  png(paste(paste(base_folder, method, sep="/"),"venn_cosineintra_wang_resnik.png", sep="/"),width=800,height=700, res=96)
-  plot_venn(wang_set, resnik_set, cosine_intra_set, c("Wang", "Resnik", "Cosine intra"))
-  dev.off()
 
-  UI_intra_set = unique(results_UI_intra$data$cluster)
-  png(paste(paste(base_folder, method, sep="/"),"venn_UIintra_wang_resnik.png", sep="/"),width=800,height=700, res=96)
-  plot_venn(wang_set, resnik_set, UI_intra_set, c("Wang", "Resnik", "UI intra"))
-  dev.off()
-
-  binary_intra_set = unique(results_binary_intra$data$cluster)
-  png(paste(paste(base_folder, method, sep="/"),"venn_binaryintra_wang_resnik.png", sep="/"),width=800,height=700, res=96)
-  plot_venn(wang_set, resnik_set, binary_intra_set, c("Wang", "Resnik", "binary intra"))
-  dev.off()
-
-  BC_intra_set = unique(results_BC_intra$data$cluster)
-  png(paste(paste(base_folder, method, sep="/"),"venn_BCintra_wang_resnik.png", sep="/"),width=800,height=700, res=96)
-  plot_venn(wang_set, resnik_set, BC_intra_set, c("Wang", "Resnik", "BC intra"))
-  dev.off()
 }
 
 
 # Reads cluster results
 read_clustering_results <- function(folder, measure){
 
-  base_folder = "results/GO_enrichment"
-  folder = paste(base_folder, folder, sep="/")
+  #base_folder = "results/GO_enrichment"
+  #folder = paste(base_folder, folder, sep="/")
   dist2centroid_file = paste(folder, "distances_to_centroid.txt", sep="/")
   dist2centroid = read.table(dist2centroid_file, header = T, sep = "\t", stringsAsFactors = F)
   names(dist2centroid) = c("GO", measure)
