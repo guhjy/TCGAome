@@ -22,6 +22,7 @@ Imports:
     gridExtra,
     mixOmics,
     omicade4,
+    ontoCAT,
     RGCCA,
     ReactomePA,
     reshape,
@@ -32,5 +33,6 @@ Imports:
     VennDiagram
 License: MIT
 LazyData: true
-RoxygenNote: 5.0.1.9000
-Suggests: testthat
+RoxygenNote: 5.0.1
+Suggests:
+    testthat
