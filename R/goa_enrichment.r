@@ -1,124 +1,196 @@
-# Gene Ontology Annotations for Human genes and for all Uniprot. No electronically inferred annotations (IEA)
-GOA_HUMAN_ANNOTATIONS_URL <- "http://geneontology.org/gene-associations/gene_association.goa_human.gz"
-GOA_UNIPROT_ANNOTATIONS_URL <- "http://geneontology.org/gene-associations/gene_association.goa_uniprot_noiea.gz"
-GOA_ANNOTATIONS_FOLDER <- get_package_folder("inst/GO/GOA/")
 
-# Reads GOA resource
-read_raw_goa <- function(search_universe = "human") {
-    dir.create(GOA_ANNOTATIONS_FOLDER, recursive = T)
-    if (search_universe == "human") {
-        if (!exists("human_goa_raw")) {
-            file <- basename(GOA_HUMAN_ANNOTATIONS_URL)
-            file <- paste(GOA_ANNOTATIONS_FOLDER, file, sep = "")
-            download.file(GOA_HUMAN_ANNOTATIONS_URL, file)
-            human_goa_raw <<- read.table(file, header = F, comment.char = "!", sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
-            human_goa_raw <<- human_goa_raw[, c(3, 5)]
-        }
-        colnames(human_goa_raw) <- c("Gene", "GO")
-        goa_raw <<- human_goa_raw
-    } else if (search_universe == "uniprot") {
-        if (!exists("uniprot_goa_raw")) {
-            file <- basename(GOA_UNIPROT_ANNOTATIONS_URL)
-            file <- paste(GOA_ANNOTATIONS_FOLDER, file, sep = "")
-            download.file(GOA_UNIPROT_ANNOTATIONS_URL, file)
-            uniprot_goa_raw <<- read.table(file, header = F, comment.char = "!", sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
-            uniprot_goa_raw <<- uniprot_goa_raw[, c(3, 5)]
-        }
-        colnames(uniprot_goa_raw) <- c("Gene", "GO")
-        goa_raw <<- uniprot_goa_raw
-    }
-    goa_raw
+# Gets the folder to store GOA resources
+get_goa_folder <- function() {
+    get_package_folder("inst/GO/GOA/")
 }
+
+# Gets the folder to store GOA resources
+get_hpo_folder <- function() {
+    get_package_folder("inst/HPO/")
+}
+
 
 # Downloads, parses and formats GOA annotations to match TopGO expected format.
-prepare_goa_annotations <- function() {
-    # Reads GOA only for human genes
-    goa_raw <- read_raw_goa()
+preprocess_goa <- function(goa_raw) {
 
-    # Pivots table on gene name
-    goa <- aggregate(data = goa_raw, GO ~ Gene, c)
-    goa$GO <- sapply(goa$GO, FUN = function(x) paste(x, collapse = ", "))
+    ## Pivots table on gene name
+    #goa <- aggregate(data = goa_raw, GO ~ Gene, c)
+    #goa$GO <- sapply(goa$GO, FUN = function(x) paste(x, collapse = ", "))
 
-    # Maps gene identifiers
-    map_entrez_hgnc <- query_biomart(attributes = c("entrezgene", "hgnc_symbol"), filters = c("hgnc_symbol"), values = goa$Gene)
+    futile.logger::flog.info("There are %s genes annotated in GOA", length(goa$Gene))
 
-    # Removes HGNC genes not having a map to Entrez
-    goa <- goa[goa$Gene %in% map_entrez_hgnc$hgnc_symbol, ]
+    ## Maps gene identifiers
+    map_entrez_hgnc <- query_biomart(attributes = c("entrezgene", "hgnc_symbol"), filters = c("hgnc_symbol"), values = goa_raw$Gene)
 
-    # Merges all annotations
-    goa <- merge(x = goa, y = map_entrez_hgnc, by.x = "Gene", by.y = "hgnc_symbol", all.x = F)
+    ## Removes HGNC genes not having a map to Entrez
+    # FIXME: this message is erroneous
+    futile.logger::flog.info("%s out of %s genes will be removed as they don't have an entrez gene id in biomart",
+                             length(goa[! goa$Gene %in% map_entrez_hgnc$hgnc_symbol, ]$Gene),
+                             length(goa$Gene))
+    goa_raw <- goa_raw[goa_raw$Gene %in% map_entrez_hgnc$hgnc_symbol, ]
 
-    # Writes to a file the format expected
-    goa <- goa[, c("entrezgene", "GO")]
-    goa_annotations_dest <- paste(GOA_ANNOTATIONS_FOLDER, "goa_parsed.txt", sep = "")
-    write.table(goa, file = goa_annotations_dest, row.names = F, quote = F, sep = "\t")
+    ## Merges annotations and pivots
+    goa_raw <- merge(x = goa_raw, y = map_entrez_hgnc, by.x = "Gene", by.y = "hgnc_symbol", all.x = F)
+    goa <- aggregate(data = goa_raw, entrezgene ~ GO, c)
 
-    goa_annotations_dest
+    return(goa)
 }
 
-# Returns the semantic similarity score between the two terms
-get_semantic_similarity <- function(term1, term2, measure = "Wang", gene_list = NULL, ont = "BP", search_universe = NULL) {
-    res <- try(GOSemSim::mgoSim(term1, term2, organism = "human", measure = measure, ont = ont), silent = TRUE)
-    if (class(res) == "try-error" | is.na(res)) {
-        # Some terms are not found allegedly due to different versions of GO
-        res <- 0
-    }
-    res
-}
 
-# Returns the functional similarity score between two terms based on the asymmetric binary or UI distance.  formula: count(xor) / count(union)
-get_functional_similarity <- function(term1, term2, measure = "UI", gene_list = NULL, ont = NULL, search_universe = "human") {
-    goa <- read_raw_goa(search_universe)
-    # if a gene list is provided it reduces the search universe to that list
-    if (!is.null(gene_list)) {
-        goa <- goa[goa$Gene %in% gene_list, ]
-    }
-    term1_genes <- unique(goa[goa$GO == term1, c("Gene")])
-    term2_genes <- unique(goa[goa$GO == term2, c("Gene")])
+#' Reads Gene Ontology Annotations (GOA) for Human genes and for all Uniprot. No electronically inferred annotations (IEA)
+#' @param search_universe Two possible values "human" or "uniprot". The first provides associations to GO of human genes,
+#' while the second considers all genes registered in Uniprot. [default: "human"]
+#' @param goa_human_annotations_url The URL to human GOA. [default: "http://geneontology.org/gene-associations/gene_association.goa_human.gz"]
+#' @param goa_uniprot_annotations_url The URL to Uniprot GOA. [default: "http://geneontology.org/gene-associations/gene_association.goa_uniprot_noiea.gz"]
+#'
+#' @keywords TCGAome
+#' @export
+#' @examples
+#' raw_goa = load_goa()
+load_goa <- function(search_universe = "human",
+                     goa_human_annotations_url = "http://geneontology.org/gene-associations/gene_association.goa_human.gz",
+                     goa_uniprot_annotations_url = "http://geneontology.org/gene-associations/gene_association.goa_uniprot_noiea.gz") {
 
-    # calculates the union
-    term_union <- union(term1_genes, term2_genes)
-    if (length(term_union) == 0 | length(term1_genes) == 0 | length(term2_genes) == 0) {
-        # When no genes associated to any term they are disimilar
-        similarity <- 0
-    } else {
-        # calculates the intersection
-        term_intersection <- intersect(term1_genes, term2_genes)
-        # calculates the different similarity metrics
-        if (measure == "binary") {
-            term_xor <- term_union[!term_union %in% term_intersection]
-            similarity <- length(term_xor) / length(unique(goa$Gene))
-        } else if (measure == "UI") {
-            similarity <- length(term_intersection) / length(term_union)
-        } else if (measure == "bray-curtis") {
-            similarity <- ( 2 * length(term_intersection) ) / ( length(term1_genes) + length(term2_genes) )
-        } else if (measure == "cosine") {
-            similarity <- length(term_intersection) / ( sqrt(length(term1_genes) * length(term2_genes)) )
+    ## get and create working folder
+    goa_annotations_folder <- TCGAome::get_goa_folder()
+    goa = NULL
+
+    if (search_universe == "human") {
+        ## Loads stored attribute if any
+        goa <- attr(load_goa, "human_goa")
+        if (is.null(goa)) {
+            ## Downloads and stores as attribute human GOA
+            futile.logger::flog.debug("Loading human GOA for the first time")
+            file <- basename(goa_human_annotations_url)
+            file <- paste(goa_annotations_folder, file, sep = "")
+            download.file(goa_human_annotations_url, file, quiet = TRUE)
+            goa_raw <- read.table(file, header = F, comment.char = "!", sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
+            goa_raw <- goa_raw[, c(3, 5)]
+            colnames(goa_raw) <- c("Gene", "GO")
+            goa <- TCGAome::preprocess_goa(goa_raw)
+            attr(load_goa, "human_goa") <<- goa
+        } else {
+            futile.logger::flog.debug("Loading cached human GOA")
         }
+    } else if (search_universe == "uniprot") {
+        ## Loads stored attribute if any
+        goa <- attr(load_goa, "uniprot_goa")
+        if (is.null(goa)) {
+            ## Downloads and stores as attribute uniprot GOA
+            futile.logger::flog.debug("Loading uniprot GOA for the first time")
+            file <- basename(goa_uniprot_annotations_url)
+            file <- paste(goa_annotations_folder, file, sep = "")
+            download.file(goa_uniprot_annotations_url, file, quiet = TRUE)
+            goa_raw <- read.table(file, header = F, comment.char = "!", sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
+            goa_raw <- goa_raw[, c(3, 5)]
+            colnames(goa_raw) <- c("Gene", "GO")
+            ## Preprocess the GOA table, maps gene ids to entrez gene ids
+            goa <- TCGAome::preprocess_goa(goa_raw)
+            attr(load_goa, "uniprot_goa") <<- goa
+        } else {
+            futile.logger::flog.debug("Loading cached uniprot GOA")
+        }
+    } else {
+        futile.logger::flog.error("Non supported search universe [%s]", search_universe)
     }
-    similarity
+
+    return(goa)
 }
 
-# Returns the relative size in percentage of the GO term by the number of genes associatd to it.
-get_goa_size <- function(go_term, search_universe = "human") {
-    goa_raw <- read_raw_goa(search_universe)
-    if (!exists("max_goa_size")) {
-        max_goa_size <<- max(table(unique(goa_raw)$GO))
+
+load_hpo <- function(
+    hpo_annotations_url =
+        "http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastStableBuild/artifact/annotation/ALL_SOURCES_TYPICAL_FEATURES_phenotype_to_genes.txt") {
+
+    ## get and create working folder
+    hpo_annotations_folder <- TCGAome::get_hpo_folder()
+
+    ## Loads stored attribute if any
+    hpo <- attr(load_hpo, "hpo")
+    if (is.null(hpo)) {
+        ## Downloads and stores as attribute human GOA
+        futile.logger::flog.debug("Loading HPO for the first time")
+        file <- basename(hpo_annotations_url)
+        file <- paste(hpo_annotations_folder, file, sep = "")
+        download.file(hpo_annotations_url, file, quiet = TRUE)
+        hpo_raw <- read.table(file, header = F, comment.char = "#", sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
+        hpo_raw <- hpo_raw[, c(4, 1)]
+        colnames(hpo_raw) <- c("Gene", "GO")
+        ## Preprocess the GOA table, maps gene ids to entrez gene ids
+        hpo <- TCGAome::preprocess_goa(hpo_raw)
+        attr(load_goa, "hpo") <<- hpo
+    } else {
+        futile.logger::flog.debug("Loading cached HPO")
     }
-    (length(unique(goa_raw[goa_raw$GO == go_term, 1])) / max_goa_size)
+
+    return(hpo)
 }
+
+
+get_enrichment <- function(gene_list, pvalue_threshold = 0.01, adjustment_method = "none") {
+    futile.logger::flog.info("Computes GO enrichment")
+
+    ## Prepares data
+    goa <- TCGAome::load_goa()
+    all_genes <- unique(unlist(goa$entrezgene))
+    selected_genes <- gene_list
+    all_terms <- unique(goa$GO)
+    goa$count = sapply(goa$entrezgene, length)
+
+    ## Computes the Fisher test for every GO term
+    results = sapply(all_terms, FUN=function(X) {
+        associated_genes = as.character(unlist(goa[goa$GO == X, ]$entrezgene))
+        fisher.test(matrix(c(
+            length(intersect(selected_genes, associated_genes)),
+            length(associated_genes[! associated_genes %in% selected_genes]),
+            length(selected_genes[! selected_genes %in% associated_genes]),
+            length(all_genes[! all_genes %in% union(associated_genes, selected_genes)])
+        ), nrow = 2, ncol = 2),
+        alternative = "greater")$p.value
+    })
+
+    # Multiple test correction
+    results_adjusted <- p.adjust(results, method = adjustment_method)
+
+    # removes not significant results (keeps those significant)
+    results_significant <- results_adjusted[results_adjusted <= pvalue_threshold]
+
+    futile.logger::flog.info("Finished computing GO enrichment")
+
+    futile.logger::flog.info("Computes size of GO terms, based on Uniprot-GOA annotations")
+    # Calculates frequency (size) of GO terms according to GOA (we use the whole uniprot to calculate size)
+    sizes <- as.vector(sapply(names(results_significant), FUN = get_goa_size))
+    futile.logger::flog.info("Finished computing size of GO terms")
+
+    # Returns results
+    return(data.frame(
+        GO = names(results_significant),
+        pvalue = as.double(results_significant),
+        size = sizes,
+        row.names = NULL, stringsAsFactors = F))
+
+        #name = results$Term,
+        #annotated_genes = results$Annotated,
+        #found_genes = results$Significant,
+        #expected_genes = results$Expected,
+}
+
+
 
 # Calculates the enriched GO terms for a list of genes based on GOA Uses the Fisher test provided by TopGO
 get_go_enrichment <- function(gene_list, pvalue_threshold = 0.01, ontology = "BP", multiple_test_adjustment = FALSE) {
     futile.logger::flog.info("Computes GO enrichment")
 
     # Prepares data
-    geneid2go <- topGO::readMappings(file = prepare_goa_annotations())
+    goa = TCGAome::load_goa()
+    goa <- goa[, c("entrezgene", "GO")]
+    goa_annotations_dest <- paste(TCGAome::get_goa_folder(), "goa_parsed.txt", sep = "")
+    write.table(goa, file = goa_annotations_dest, row.names = F, quote = F, sep = "\t")
+    geneid2go <- topGO::readMappings(file = goa_annotations_dest)
     gene_names <- names(geneid2go)
     gene_list <- factor(as.integer(gene_names %in% gene_list))
     names(gene_list) <- gene_names
     godata <- new("topGOdata", ontology = ontology, allGenes = gene_list, annot = topGO::annFUN.gene2GO, gene2GO = geneid2go)
-
 
     # Performs enrichment test
     test_fisher <- new("classicCount", testStatistic = topGO::GOFisherTest, name = "Fisher test")
@@ -226,6 +298,59 @@ multidimensional_scaling <- function(distance) {
     }
 
     list(x = x, y = y)
+}
+
+# Returns the semantic similarity score between the two terms
+get_semantic_similarity <- function(term1, term2, measure = "Wang", gene_list = NULL, ont = "BP", search_universe = NULL) {
+    res <- try(GOSemSim::mgoSim(term1, term2, organism = "human", measure = measure, ont = ont), silent = TRUE)
+    if (class(res) == "try-error" | is.na(res)) {
+        # Some terms are not found allegedly due to different versions of GO
+        res <- 0
+    }
+    res
+}
+
+# Returns the functional similarity score between two terms based on the asymmetric binary or UI distance.  formula: count(xor) / count(union)
+get_functional_similarity <- function(term1, term2, measure = "UI", gene_list = NULL, ont = NULL, search_universe = "human") {
+    goa <- load_goa(search_universe)
+    # if a gene list is provided it reduces the search universe to that list
+    if (!is.null(gene_list)) {
+        goa <- goa[goa$Gene %in% gene_list, ]
+    }
+    term1_genes <- unique(goa[goa$GO == term1, c("Gene")])
+    term2_genes <- unique(goa[goa$GO == term2, c("Gene")])
+
+    # calculates the union
+    term_union <- union(term1_genes, term2_genes)
+    if (length(term_union) == 0 | length(term1_genes) == 0 | length(term2_genes) == 0) {
+        # When no genes associated to any term they are disimilar
+        similarity <- 0
+    } else {
+        # calculates the intersection
+        term_intersection <- intersect(term1_genes, term2_genes)
+        # calculates the different similarity metrics
+        if (measure == "binary") {
+            term_xor <- term_union[!term_union %in% term_intersection]
+            similarity <- length(term_xor) / length(unique(goa$Gene))
+        } else if (measure == "UI") {
+            similarity <- length(term_intersection) / length(term_union)
+        } else if (measure == "bray-curtis") {
+            similarity <- ( 2 * length(term_intersection) ) / ( length(term1_genes) + length(term2_genes) )
+        } else if (measure == "cosine") {
+            similarity <- length(term_intersection) / ( sqrt(length(term1_genes) * length(term2_genes)) )
+        }
+    }
+    similarity
+}
+
+# Returns the relative size in percentage of the GO term by the number of genes associatd to it.
+get_goa_size <- function(go_term, search_universe = "human") {
+    goa <- load_goa(search_universe)
+    max_goa_size <- attr(get_goa_size, "max_goa_size")
+    if (is.null(max_goa_size)) {
+        attr(get_goa_size, "max_goa_size") <<- max(table(unique(goa)$GO))
+    }
+    (length(unique(goa[goa$GO == go_term, 1])) / max_goa_size)
 }
 
 # Plots GO terms according to the enrichment results

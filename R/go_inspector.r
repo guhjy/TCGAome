@@ -9,23 +9,27 @@ is_java_object_null <- function(pointer) {
 }
 
 # Reads the GO ontology tree
-read_go_ontology <- function() {
-    if (!exists("go_tree") || is_java_object_null(go_tree@ontology@jobj)) {
+load_go_ontology <- function() {
+    go_tree <- attr(load_go_ontology, "cached_go_tree")
+    if (is.null(go_tree) || is_java_object_null(go_tree@ontology@jobj)) {
+        futile.logger::flog.info("Loading the GO tree for the first time")
         # detach('package:ontoCAT', unload=TRUE) detach('package:rJava', unload=TRUE) Reads whole Gene ONtology tree
         options(java.parameters = "-Xms8G")
         options(java.parameters = "-Xmx8G")
         # .jinit()
 
         # .jcall(.jnew('java/lang/Runtime'), 'J', 'maxMemory') go_tree <- getOntology('http://purl.obolibrary.org/obo/go/go-basic.obo')
-        go_tree <<- OntoCAT::getOntology("http://purl.obolibrary.org/obo/go.owl")
+        go_tree <- ontoCAT::getOntology("http://purl.obolibrary.org/obo/go.owl")
+        attr(load_go_ontology, "cached_go_tree") <<- go_tree
+    } else {
+        futile.logger::flog.info("Returning cached GO tree")
     }
-
     go_tree
 }
 
 # From the original terms list keeps only the most specific terms.  All terms having any of its descendants included in the list is removed.
 get_most_specific_terms <- function(terms_list) {
-    go_tree <- read_go_ontology()
+    go_tree <- load_go_ontology()
 
     # Parses Java object and retrieves the GO id
     get_term_accession <- function(term) {
@@ -34,7 +38,7 @@ get_most_specific_terms <- function(terms_list) {
 
     # Retrieves all children for a given GO term and removes those children not being associated to any gene in our gene list.
     get_children <- function(object, term_id, associated_terms) {
-        children <- sapply(OntoCAT::getAllTermChildrenById(object = object, id = term_id), get_term_accession)
+        children <- sapply(ontoCAT::getAllTermChildrenById(object = object, id = term_id), get_term_accession)
         children[children %in% associated_terms]
     }
 

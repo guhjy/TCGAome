@@ -3,13 +3,13 @@ load_biomart <- function() {
     ensembl <- attr(load_biomart, "cached_ensembl")
     if (is.null(ensembl)) {
         ## Loads ensembl biomart for Homo sapiens ensembl = useMart('ensembl',dataset='hsapiens_gene_ensembl')
-        futile.logger::flog.info("Loading biomart for the first time")
+        futile.logger::flog.debug("Loading biomart for the first time")
         ensembl_mart <- biomaRt::useMart("ENSEMBL_MART_ENSEMBL", host = "www.ensembl.org")
         dataset <- "hsapiens_gene_ensembl"
         ensembl <- biomaRt::useDataset(dataset, mart = ensembl_mart)
         attr(load_biomart, "cached_ensembl") <<- ensembl
     } else {
-      futile.logger::flog.info("Returning cached biomart")
+      futile.logger::flog.debug("Returning cached biomart")
     }
     ensembl
 }
