@@ -1,4 +1,3 @@
-library(TCGAome)
 context("Tests biomart.R functions")
 
 test_that("load_biomart()", {

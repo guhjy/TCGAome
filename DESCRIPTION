@@ -30,6 +30,7 @@ Imports:
     reshape,
     RTCGAToolbox,
     scales,
+    testthat,
     topGO,
     treemap,
     VennDiagram

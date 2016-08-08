@@ -1,4 +1,3 @@
-library(TCGAome)
 context("Tests go_inspector.R functions")
 
 test_that("load_go_ontology()", {

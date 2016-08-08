@@ -1,4 +1,3 @@
-library(TCGAome)
 context("Tests config.R functions")
 
 test_that("configure_logging() in a non existing folder", {

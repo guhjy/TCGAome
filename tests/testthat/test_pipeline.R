@@ -1,4 +1,3 @@
-library(TCGAome)
 context("Tests pipeline.R functions")
 
 test_that("get_TCGAome_tumor_types()", {
