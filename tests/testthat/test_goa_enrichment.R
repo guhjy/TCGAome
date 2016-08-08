@@ -4,12 +4,30 @@ context("Tests goa_enrichment.R functions")
 test_that("load_goa()", {
     ## Loads human GOA for a first time
     human_goa = TCGAome::load_goa()
-    testthat::expect_is(human_goa, "data.frame")
-    testthat::expect_equal(colnames(human_goa), c("Gene", "GO"))
+    testthat::expect_is(human_goa, "GeneAnnotations")
+    testthat::expect_equal(colnames(human_goa@raw_annotations), c("Gene", "Term"))
     ## Loads the cached version
     human_goa = TCGAome::load_goa()
-    testthat::expect_is(human_goa, "data.frame")
-    testthat::expect_equal(colnames(human_goa), c("Gene", "GO"))
+    testthat::expect_is(human_goa, "GeneAnnotations")
+    testthat::expect_equal(colnames(human_goa@raw_annotations), c("Gene", "Term"))
+    ## Gets term size
+    size = TCGAome::get_term_size(
+        human_goa,
+        human_goa@raw_annotations$Term[runif(
+            1,
+            max=length(human_goa@raw_annotations$Term))])
+    testthat::expect_is(size, "double")
+    ## Gets UI similarity
+    similarity = TCGAome::get_functional_similarity(
+        human_goa,
+        term1 = human_goa@raw_annotations$Term[runif(
+            1,
+            max=length(human_goa@raw_annotations$Term))],
+        term2 = human_goa@raw_annotations$Term[runif(
+            1,
+            max=length(human_goa@raw_annotations$Term))],
+        method = "UI")
+    testthat::expect_is(similarity, "double")
 })
 
 test_that("load_goa(uniprot)", {

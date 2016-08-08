@@ -9,6 +9,7 @@ Description: The package downloads RNAseq, RPPA and clinical TCGA datasets
 Depends:
     R (>= 3.2.3)
 Imports:
+    AnnotationDbi,
     biomaRt,
     Cairo,
     cluster,
@@ -23,6 +24,7 @@ Imports:
     mixOmics,
     omicade4,
     ontoCAT,
+    org.Hs.eg.db,
     RGCCA,
     ReactomePA,
     reshape,
