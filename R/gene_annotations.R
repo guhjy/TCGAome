@@ -35,9 +35,9 @@ load_goa <- function(search_universe = "human",
         if (is.null(goa) || is.null(stored_ontology) || ontology != stored_ontology) {
             ## Downloads and stores as attribute human GOA
             futile.logger::flog.debug("Loading human GOA for the first time")
-            uniKeys <- AnnotationDbi::keys(org.Hs.eg.db, keytype="SYMBOL")
+            uniKeys <- AnnotationDbi::keys(org.Hs.eg.db::org.Hs.eg.db, keytype="SYMBOL")
             cols <- c("GOALL")
-            goa_raw <- AnnotationDbi::select(org.Hs.eg.db, keys=uniKeys, columns=cols, keytype="SYMBOL")
+            goa_raw <- AnnotationDbi::select(org.Hs.eg.db::org.Hs.eg.db, keys=uniKeys, columns=cols, keytype="SYMBOL")
             goa_raw <- goa_raw[goa_raw$ONTOLOGYALL == ontology, ]
             goa_raw <- goa_raw[, c(1, 2)]
             colnames(goa_raw) <- c("Gene", "Term")
@@ -87,9 +87,9 @@ load_kegg <- function() {
     if (is.null(kegg)) {
         ## Downloads and stores as attribute KEGG
         futile.logger::flog.debug("Loading human KEGG for the first time")
-        uniKeys <- AnnotationDbi::keys(org.Hs.eg.db, keytype="SYMBOL")
+        uniKeys <- AnnotationDbi::keys(org.Hs.eg.db::org.Hs.eg.db, keytype="SYMBOL")
         cols <- c("PATH")
-        kegg_raw <- AnnotationDbi::select(org.Hs.eg.db, keys=uniKeys, columns=cols, keytype="SYMBOL")
+        kegg_raw <- AnnotationDbi::select(org.Hs.eg.db::org.Hs.eg.db, keys=uniKeys, columns=cols, keytype="SYMBOL")
         kegg_raw <- kegg_raw[, c(1, 2)]
         colnames(kegg_raw) <- c("Gene", "Term")
         kegg <- new("GeneAnnotations", raw_annotations = kegg_raw, name="KEGG-Human")
@@ -116,9 +116,9 @@ load_omim <- function() {
     if (is.null(omim)) {
         ## Downloads and stores as attribute human OMIM
         futile.logger::flog.debug("Loading human OMIM for the first time")
-        uniKeys <- AnnotationDbi::keys(org.Hs.eg.db, keytype="SYMBOL")
+        uniKeys <- AnnotationDbi::keys(org.Hs.eg.db::org.Hs.eg.db, keytype="SYMBOL")
         cols <- c("OMIM")
-        omim_raw <- AnnotationDbi::select(org.Hs.eg.db, keys=uniKeys, columns=cols, keytype="SYMBOL")
+        omim_raw <- AnnotationDbi::select(org.Hs.eg.db::org.Hs.eg.db, keys=uniKeys, columns=cols, keytype="SYMBOL")
         omim_raw <- omim_raw[, c(1, 2)]
         colnames(omim_raw) <- c("Gene", "Term")
         omim <- new("GeneAnnotations", raw_annotations = omim_raw, name="OMIM")
@@ -246,3 +246,15 @@ setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
               }
               return(similarity)
           })
+
+
+setGeneric("get_enrichment",
+           signature = c("x", "gene_list"),
+           function(x, gene_list) standardGeneric("get_enrichment"))
+
+setMethod("get_enrichment", c("x" = "GeneAnnotations", "gene_list" = "character"),
+          function(x, gene_list) {
+              return(new("GeneListEnrichment", gene_list = gene_list, gene_annotations = x))
+          })
+
+

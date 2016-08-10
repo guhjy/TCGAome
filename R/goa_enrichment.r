@@ -17,7 +17,7 @@
 #' "6584", "4089", "6774", "3925", "100500808", "6850", "7249",
 #' "123016", "7874", "7515", "10413", "4904", "7542", "27332",
 #' "57116", "116412"), "goa")
-get_enrichment <- function(gene_list, annotation, pvalue_threshold = 0.01, adjustment_method = "none") {
+get_enrichment_old <- function(gene_list, annotation, pvalue_threshold = 0.01, adjustment_method = "none") {
 
     futile.logger::flog.info("Computing enrichment with Fisher's test...")
 

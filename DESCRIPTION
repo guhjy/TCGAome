@@ -39,3 +39,16 @@ LazyData: true
 RoxygenNote: 5.0.1
 Suggests:
     testthat
+Collate:
+    'biomart.R'
+    'config.R'
+    'functional_analysis.R'
+    'gene_annotations.R'
+    'gene_list_enrichment.R'
+    'go_inspector.R'
+    'goa_enrichment.R'
+    'multivariate_analysis.R'
+    'pipeline.R'
+    'plots.R'
+    'preprocessing.R'
+    'tcga_download.R'
