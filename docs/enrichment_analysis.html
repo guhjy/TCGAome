@@ -137,7 +137,7 @@ $(document).ready(function () {
 <li>Gene Ontology (from org.Hs.eg.db)</li>
 <li>KEGG pathways (from org.Hs.eg.db)</li>
 <li>OMIM diseases (from org.Hs.eg.db)</li>
-<li>HPO phenotypes (from custom resource)</li>
+<li>HPO phenotypes (from <a href="http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastStableBuild/artifact/annotation/ALL_SOURCES_TYPICAL_FEATURES_phenotype_to_genes.txt" class="uri">http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastStableBuild/artifact/annotation/ALL_SOURCES_TYPICAL_FEATURES_phenotype_to_genes.txt</a>)</li>
 </ul>
 <p>These annotations can be loaded as follows:</p>
 <pre class="r"><code>goa &lt;- TCGAome::load_goa()
@@ -177,18 +177,18 @@ str(kegg, list.len = 5, vec.len = 5)</code></pre>
 <p>For any term within the <strong>TCGAome::GeneAnnotations</strong> object we can obtain its <strong>relative frequency</strong> of annotation, which might be useful to compute the <strong>Information Content</strong> within a term.</p>
 <pre class="r"><code>random_kegg_term = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
 random_kegg_term</code></pre>
-<pre><code>## [1] &quot;00100&quot;</code></pre>
+<pre><code>## [1] &quot;00140&quot;</code></pre>
 <pre class="r"><code>TCGAome::get_term_freq(kegg, random_kegg_term) </code></pre>
-<pre><code>## [1] 0.01681416</code></pre>
+<pre><code>## [1] 0.04955752</code></pre>
 <p>For any two terms within the GeneAnnotations object we can obtain its <strong>functional similarity</strong> based on the binary distances implemented in TCGAome.</p>
 <pre class="r"><code>random_kegg_term1 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
 random_kegg_term2 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
 random_kegg_term1</code></pre>
-<pre><code>## [1] &quot;00600&quot;</code></pre>
+<pre><code>## [1] &quot;04730&quot;</code></pre>
 <pre class="r"><code>random_kegg_term2</code></pre>
-<pre><code>## [1] &quot;04080&quot;</code></pre>
-<pre class="r"><code>TCGAome::get_functional_similarity(kegg, random_kegg_term1, random_kegg_term2, method = &quot;UI&quot;) </code></pre>
-<pre><code>## [1] 0</code></pre>
+<pre><code>## [1] &quot;04660&quot;</code></pre>
+<pre class="r"><code>TCGAome::get_functional_similarity(kegg, random_kegg_term1, random_kegg_term2, distance_measure = &quot;UI&quot;)</code></pre>
+<pre><code>## [1] 0.04705882</code></pre>
 <p>The supported binary distances are: UI, cosine, Bray-Curtis and binary.</p>
 <p>This model should be extended to support <strong>semantic similarity</strong> measures based on the ontology structure. This is a special case for some of these annotation resources which are also backed by an ontology, like GO and HPO. On the previous implementation of TCGAome we used <strong>GoSemSim</strong> for the semantic similarity within GO terms. We need to study if this can be easily extended to other ontologies.</p>
 </div>
@@ -244,25 +244,24 @@ str(kegg_enrichment, list.len = 5, vec.len = 5)</code></pre>
 ##   .. .. .. .. .. [list output truncated]
 ##   .. .. ..@ max_term_freq          : int 1130
 ##   .. .. .. [list output truncated]
-##   ..@ raw_enrichment  :'data.frame': 229 obs. of  3 variables:
+##   ..@ raw_enrichment  :'data.frame': 229 obs. of  2 variables:
 ##   .. ..$ Term  : chr [1:229] &quot;00010&quot; &quot;00020&quot; &quot;00030&quot; &quot;00040&quot; &quot;00051&quot; ...
-##   .. ..$ pvalue: num [1:229] 1 1 1 1 1 1 1 1 1 1 1 1 ...
-##   .. ..$ freq  : num [1:229] 0.0575 0.0265 0.0239 0.0283 0.0319 0.0239 ...</code></pre>
+##   .. ..$ pvalue: num [1:229] 1 1 1 1 1 1 1 1 1 1 1 1 ...</code></pre>
 <p>Or alternatively:</p>
 <pre class="r"><code>kegg_enrichment &lt;- new(&quot;TCGAome::GeneListEnrichment&quot;, gene_annotations = kegg, gene_list = gene_list)</code></pre>
 <p>And extract significant results:</p>
 <pre class="r"><code>TCGAome::get_significant_results(kegg_enrichment, significance_thr = 0.05, adj_method = &quot;none&quot;)</code></pre>
-<pre><code>##      Term       pvalue       freq   adj_pvalue
-## 112 04110 0.0061590702 0.10973451 0.0061590702
-## 114 04115 0.0263433137 0.06017699 0.0263433137
-## 200 05145 0.0360194893 0.11681416 0.0360194893
-## 204 05200 0.0334067677 0.28849558 0.0334067677
-## 207 05212 0.0004880615 0.06194690 0.0004880615
-## 210 05215 0.0098109166 0.07876106 0.0098109166
-## 215 05220 0.0048909621 0.06460177 0.0048909621
-## 216 05221 0.0165441885 0.05044248 0.0165441885
-## 217 05222 0.0464121410 0.07522124 0.0464121410
-## 218 05223 0.0143072153 0.04778761 0.0143072153</code></pre>
+<pre><code>##      Term       pvalue   adj_pvalue
+## 112 04110 0.0061590702 0.0061590702
+## 114 04115 0.0263433137 0.0263433137
+## 200 05145 0.0360194893 0.0360194893
+## 204 05200 0.0334067677 0.0334067677
+## 207 05212 0.0004880615 0.0004880615
+## 210 05215 0.0098109166 0.0098109166
+## 215 05220 0.0048909621 0.0048909621
+## 216 05221 0.0165441885 0.0165441885
+## 217 05222 0.0464121410 0.0464121410
+## 218 05223 0.0143072153 0.0143072153</code></pre>
 <p>To be continued….</p>
 </div>
 

@@ -14,36 +14,44 @@ setClass("GeneListEnrichment",
          }
 )
 
+## Computes the enrichment with the Fisher test for every term
+.compute_enrichment <- function(gene_list, gene_annotations) {
+    all_genes <- gene_annotations@gene2term$Gene
+    all_terms <- gene_annotations@term2gene$Term
+    pvalues <- as.double(sapply(all_terms, function(term) {
+        associated_genes = as.character(unlist(
+            gene_annotations@term2gene[gene_annotations@term2gene$Term == term, ]$Gene))
+        fisher.test(matrix(c(
+            length(intersect(gene_list, associated_genes)),
+            length(associated_genes[! associated_genes %in% gene_list]),
+            length(gene_list[! gene_list %in% associated_genes]),
+            length(all_genes[! all_genes %in% union(associated_genes, gene_list)])
+        ), nrow = 2, ncol = 2),
+        alternative = "greater")$p.value
+    }))
+    return(pvalues)
+}
+
 setMethod("initialize",
           signature(.Object = "GeneListEnrichment"),
           function(.Object, gene_list, gene_annotations){
               ## Initialize input data
               .Object@gene_list <- gene_list[!is.na(gene_list)]
               .Object@gene_annotations <- gene_annotations
-              ## Computes the enrichment with the Fisher test for every term
-              all_genes <- gene_annotations@gene2term$Gene
-              selected_genes <- .Object@gene_list
-              all_terms <- gene_annotations@term2gene$Term
-              results <- sapply(all_terms, function(term) {
-                  associated_genes = as.character(unlist(
-                      gene_annotations@term2gene[gene_annotations@term2gene$Term == term, ]$Gene))
-                  fisher.test(matrix(c(
-                      length(intersect(selected_genes, associated_genes)),
-                      length(associated_genes[! associated_genes %in% selected_genes]),
-                      length(selected_genes[! selected_genes %in% associated_genes]),
-                      length(all_genes[! all_genes %in% union(associated_genes, selected_genes)])
-                  ), nrow = 2, ncol = 2),
-                  alternative = "greater")$p.value
-              })
+
+              ## Computes enrichment
+              pvalues <- .compute_enrichment(.Object@gene_list, gene_annotations)
+
               ## Computes the relative frequency of every term
-              freqs <- as.double(sapply(all_terms, function(term){
-                  TCGAome::get_term_freq(gene_annotations, term)
-              }))
+              #freqs <- as.double(sapply(all_terms, function(term){
+              #    TCGAome::get_term_freq(gene_annotations, term)
+              #}))
               ## Builds results data.frame
+              all_terms <- gene_annotations@term2gene$Term
               .Object@raw_enrichment <- data.frame(
                   Term = all_terms,
-                  pvalue = as.double(results),
-                  freq = freqs,
+                  pvalue = pvalues,
+                  #freq = freqs,
                   row.names = NULL, stringsAsFactors = F)
 
               return(.Object)

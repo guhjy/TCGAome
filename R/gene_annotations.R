@@ -210,18 +210,18 @@ setMethod("get_term_freq", c("x" = "GeneAnnotations", "term" = "character"),
 
 
 setGeneric("get_functional_similarity",
-           signature = c("x", "term1", "term2", "method"),
-           function(x, term1, term2, method) standardGeneric("get_functional_similarity"))
+           signature = c("x", "term1", "term2", "distance_measure"),
+           function(x, term1, term2, distance_measure) standardGeneric("get_functional_similarity"))
 
 setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
                                          "term1" = "character",
                                          "term2" = "character",
-                                         "method" = "character"),
-          function(x, term1, term2, method) {
+                                         "distance_measure" = "character"),
+          function(x, term1, term2, distance_measure) {
               #TODO: check valid methods
               stopifnot(term1 %in% x@term2gene$Term &&
                             term2 %in% x@term2gene$Term &&
-                            method %in% x@func_similarity_methods)
+                            distance_measure %in% x@func_similarity_methods)
               term1_genes <- x@term2gene[x@term2gene$Term == term1, c("Gene")][[1]]
               term2_genes <- x@term2gene[x@term2gene$Term == term2, c("Gene")][[1]]
               # calculates the union
@@ -233,18 +233,47 @@ setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
                   # calculates the intersection
                   term_intersection <- intersect(term1_genes, term2_genes)
                   # calculates the different similarity metrics
-                  if (method == "binary") {
+                  if (distance_measure == "binary") {
                       term_xor <- term_union[!term_union %in% term_intersection]
                       similarity <- length(term_xor) / length(x@gene2term$Gene)
-                  } else if (method == "UI") {
+                  } else if (distance_measure == "UI") {
                       similarity <- length(term_intersection) / length(term_union)
-                  } else if (method == "bray-curtis") {
+                  } else if (distance_measure == "bray-curtis") {
                       similarity <- ( 2 * length(term_intersection) ) / ( length(term1_genes) + length(term2_genes) )
-                  } else if (method == "cosine") {
+                  } else if (distance_measure == "cosine") {
                       similarity <- length(term_intersection) / ( sqrt(length(term1_genes) * length(term2_genes)) )
                   }
               }
               return(similarity)
+          })
+
+
+setGeneric("get_term_distance_matrix",
+           signature = c("x", "distance_measure", "subset"),
+           function(x, distance_measure, subset) standardGeneric("get_term_distance_matrix"))
+
+setMethod("get_term_distance_matrix", c("x" = "GeneAnnotations",
+                                        "distance_measure" = "character",
+                                        "subset" = "character"),
+          function(x, distance_measure, subset) {
+              if (is.null(subset)) {
+                  all_terms <- x@term2gene$Term
+              } else {
+                  all_terms = subset
+              }
+              distance_matrix <- data.frame(matrix(0, nrow = length(all_terms), ncol = length(all_terms)), stringsAsFactors = F)
+              rownames(distance_matrix) <- all_terms
+              colnames(distance_matrix) <- all_terms
+              # Calculates similarity on pairwise comparisons
+              pairwise_term_combinations <- combn(all_terms, 2)
+              apply(pairwise_term_combinations, 2, FUN = function(y) {
+                  distance_matrix[y[1], y[2]] <- get_functional_similarity(
+                      x,
+                      term1 = y[1], term2 = y[2], distance_measure = distance_measure)
+                  })
+              # Converts similarity matrix into distance matrix
+              distance_matrix <- 1 - distance_matrix
+              return(as.dist(t(distance_matrix)))
           })
 
 

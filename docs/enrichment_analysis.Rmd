@@ -2,7 +2,7 @@
 title: "Enrichment Analysis"
 author: "priesgo"
 date: "August 9, 2016"
-output: pdf_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE, warning=FALSE}
@@ -56,7 +56,7 @@ random_kegg_term1 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Ter
 random_kegg_term2 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
 random_kegg_term1
 random_kegg_term2
-TCGAome::get_functional_similarity(kegg, random_kegg_term1, random_kegg_term2, method = "UI") 
+TCGAome::get_functional_similarity(kegg, random_kegg_term1, random_kegg_term2, distance_measure = "UI")
 ```
 
 The supported binary distances are: UI, cosine, Bray-Curtis and binary.
@@ -97,7 +97,7 @@ str(kegg_enrichment, list.len = 5, vec.len = 5)
 
 Or alternatively:
 ```{r, eval=FALSE}
-kegg_enrichment <- new("TCGAome::GeneListEnrichment", gene_annotations = kegg, gene_list = gene_list)
+kegg_enrichment <- new("GeneListEnrichment", gene_annotations = kegg, gene_list = gene_list)
 ```
 
 And extract significant results:
@@ -107,4 +107,10 @@ TCGAome::get_significant_results(kegg_enrichment, significance_thr = 0.05, adj_m
 ```
 
 
-To be continued....
+## Visualizing enrichment results (clustering + MDS)
+
+```{r, warning=FALSE, message=FALSE}
+kegg_term_clustering <- new("TermsClustering", kegg_enrichment, "UI", significance_thr = 0.05, adj_method = "none")
+str(kegg_term_clustering, list.len = 5, vec.len = 5)
+```
+
