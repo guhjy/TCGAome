@@ -111,6 +111,15 @@ TCGAome::get_significant_results(kegg_enrichment, significance_thr = 0.05, adj_m
 
 ```{r, warning=FALSE, message=FALSE}
 kegg_term_clustering <- new("TermsClustering", kegg_enrichment, "UI", significance_thr = 0.05, adj_method = "none")
-str(kegg_term_clustering, list.len = 5, vec.len = 5)
+str(kegg_term_clustering@distance_matrix, vec.len = 5)
+str(kegg_term_clustering@significant_results, vec.len = 5)
+```
+
+```{r, warning=FALSE, message=FALSE}
+plot(kegg_term_clustering@significant_results$x, 
+     kegg_term_clustering@significant_results$y, 
+     col = kegg_term_clustering@significant_results$Cluster, 
+     cex = log(kegg_term_clustering@significant_results$Freq * 100), 
+     pch=20)
 ```
 

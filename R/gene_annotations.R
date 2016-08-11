@@ -228,7 +228,7 @@ setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
               term_union <- union(term1_genes, term2_genes)
               if (length(term_union) == 0 | length(term1_genes) == 0 | length(term2_genes) == 0) {
                   # When no genes associated to any term they are disimilar
-                  similarity <- 0
+                  similarity <- 0.0
               } else {
                   # calculates the intersection
                   term_intersection <- intersect(term1_genes, term2_genes)
@@ -261,19 +261,25 @@ setMethod("get_term_distance_matrix", c("x" = "GeneAnnotations",
               } else {
                   all_terms = subset
               }
-              distance_matrix <- data.frame(matrix(0, nrow = length(all_terms), ncol = length(all_terms)), stringsAsFactors = F)
-              rownames(distance_matrix) <- all_terms
-              colnames(distance_matrix) <- all_terms
-              # Calculates similarity on pairwise comparisons
-              pairwise_term_combinations <- combn(all_terms, 2)
-              apply(pairwise_term_combinations, 2, FUN = function(y) {
-                  distance_matrix[y[1], y[2]] <- get_functional_similarity(
-                      x,
-                      term1 = y[1], term2 = y[2], distance_measure = distance_measure)
+              ## Initializes to 1 as diagonal elements will not be evaluated.
+              similarity_matrix <- data.frame(matrix(1, nrow = length(all_terms), ncol = length(all_terms)), stringsAsFactors = F)
+              rownames(similarity_matrix) <- all_terms
+              colnames(similarity_matrix) <- all_terms
+              # Calculates similarity on pairwise comparisons without repetition
+              pairwise_term_combn <- combn(all_terms, 2)
+              tallskinny_dist <- apply(pairwise_term_combn, 2, FUN = function(y) {
+                  get_functional_similarity(
+                      x, term1 = y[1], term2 = y[2], distance_measure = distance_measure)
                   })
+              idx <- rbind(cbind(match(pairwise_term_combn[1 , ], all_terms),
+                                 match(pairwise_term_combn[2 , ], all_terms)),
+                           cbind(match(pairwise_term_combn[2 , ], all_terms),
+                                 match(pairwise_term_combn[1 , ], all_terms)))
+              similarity_matrix[idx] <- tallskinny_dist
+
               # Converts similarity matrix into distance matrix
-              distance_matrix <- 1 - distance_matrix
-              return(as.dist(t(distance_matrix)))
+              distance_matrix <- 1 - similarity_matrix
+              return(as.dist(distance_matrix))
           })
 
 

@@ -7,9 +7,7 @@ setClass("TermsClustering",
                         adj_method = "character",
                         significant_results = "data.frame",
                         distance_measure = "character",
-                        distance_matrix = "dist",
-                        clusters = "data.frame",
-                        mds = "data.frame"),
+                        distance_matrix = "dist"),
          prototype(
              gene_list_enrichment = NULL,
              distance_measure = NULL,
@@ -31,23 +29,22 @@ setClass("TermsClustering",
 #    clusters
 #}
 
-# PAM and silhouette clustering
+## PAM and silhouette clustering
 .pam_clustering <- function(distance) {
-    # Clustering with PAM and silhouette
     max_clusters <- attr(distance, "Size") - 1
-    sil_width <- numeric(max_clusters)
-    #TODO: vectorize this!
-    for (k in 2:max_clusters) {
-        sil_width[k] <- cluster::pam(distance, k)$silinfo$avg.width
-    }
-    k_best <- which.max(sil_width[2:max_clusters])
+    ## Finds the optimal number of clusters by silhouette analysis
+    sil_width <- sapply(2:max_clusters, FUN = function(x) cluster::pam(distance, x)$silinfo$avg.width)
+    names(sil_width) <- 2:max_clusters
+    k_best <- as.numeric(names(which.max(sil_width)))
     message(paste("Optimal number of clusters: ", k_best))
+    ## Clusters with PAM
     clustering <- cluster::pam(distance, k_best)
     return(data.frame(Term = names(clustering$clustering),
-                      Cluster = as.vector(clustering$clustering)))
+                      Cluster = as.vector(clustering$clustering),
+                      stringsAsFactors = F))
 }
 
-# MDS
+## Multidimensional Scaling
 .multidimensional_scaling <- function(distance) {
     number_elements <- attr(distance, "Size")
     if (number_elements < 2) {
@@ -66,7 +63,8 @@ setClass("TermsClustering",
             names(y) <- names(x)
         }
     }
-    return(data.frame(x = x, y = y))
+    return(data.frame(Term = names(x), x = x, y = y,
+                      stringsAsFactors = F))
 }
 
 setMethod("initialize",
@@ -79,19 +77,36 @@ setMethod("initialize",
               ## Initialize input data
               .Object@gene_list_enrichment <- gene_list_enrichment
               .Object@distance_measure <- distance_measure
-              .Object@significant_results <- get_significant_results(
+
+              ## Gets only significant enrichment results
+              significant_results <- get_significant_results(
                   gene_list_enrichment, significance_thr, adj_method)
+
+              ## Computes distance matrix
               .Object@distance_matrix <- get_term_distance_matrix(
                   gene_list_enrichment@gene_annotations, distance_measure,
-                  subset=.Object@significant_results$Term)
+                  subset = significant_results$Term)
 
               ## Computes clustering
-              .Object@clusters <- TCGAome::.pam_clustering(
+              clusters <- TCGAome::.pam_clustering(
                   .Object@distance_matrix)
+              significant_results <- merge(significant_results, clusters, by = "Term")
 
               ## Computes MDS
-              .Object@mds <- TCGAome::.multidimensional_scaling(
+              mds <- TCGAome::.multidimensional_scaling(
                   .Object@distance_matrix)
+              significant_results <- merge(significant_results, mds, by = "Term")
+
+              ## Retrieves the frequency of annotation
+              significant_results$Freq <- sapply(
+                  significant_results$Term,
+                  FUN = function(term) {
+                      TCGAome::get_term_freq(
+                      gene_list_enrichment@gene_annotations, term)
+                      }
+                  )
+
+              .Object@significant_results <- significant_results
 
               return(.Object)
           })
