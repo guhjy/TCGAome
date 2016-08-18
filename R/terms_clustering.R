@@ -1,6 +1,30 @@
 #' @include gene_list_enrichment.R
 NULL
 
+
+#' TermsClustering class
+#'
+#' An S4 class to represent the dimensionality reduction computed on
+#' enrichment results. Given an object of class "GeneListEnrichment" and a
+#' distance measure this class computes:
+#' (1) the Partitioning Around Medoids (PAM) clustering
+#' (2) the cluster representative selection based on the enrichment significance
+#' and the frequency of annotation of the term to give priority to the most
+#' specific terms
+#' (3) the MultiDimensional Scaling (MDS) results on the cluster representatives
+#'
+#' @slot gene_list_enrichment The object of class GeneListEnrichment that
+#' that contains the enrichment results
+#' @slot significance_thr The significance threshold applied to the enrichment
+#' results. The significance threshold is a fixed value, if you want to modify
+#' it you would need to create another object.
+#' @slot adj_method The multiple test adjustment method. Methods supported are
+#' those supported by p.adjust()
+#' @slot significant_results A data.frame with the selected annotations terms
+#' after applying the multiple test correction and the significance threshold.
+#' @slot distance_measure The distance measure employed for the clustering
+#' @slot distance_matrix The distance matrix between annotation terms by using
+#' the given distance_measure
 setClass("TermsClustering",
          representation(gene_list_enrichment = "GeneListEnrichment",
                         significance_thr = "numeric",
@@ -20,6 +44,25 @@ setClass("TermsClustering",
                            ! is.null(adj_method))
          }
 )
+
+#' TermsClustering constructor
+#'
+#' The constructor for TermsClustering
+#'
+#' @param gene_list_enrichment The object of class GeneListEnrichment that
+#' that contains the enrichment results
+#' @param distance_measure The distance measure employed for the clustering
+#' @param significance_thr The significance threshold applied to the enrichment
+#' results. The significance threshold is a fixed value, if you want to modify
+#' it you would need to create another object.
+#' @param adj_method The multiple test adjustment method. Methods supported are
+#' those supported by p.adjust()
+#'
+#' @return The TermsClustering object
+#'
+#' @examples
+#' TODO
+TermsClustering <- function(...) new("TermsClustering",...)
 
 # Hierarchical clustering
 #hclust_clustering <- function(distance, distance_threshold) {

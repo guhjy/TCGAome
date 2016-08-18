@@ -1,6 +1,17 @@
 #' @include gene_annotations.R
 NULL
 
+#' GeneListEnrichment class
+#'
+#' An S4 class to represent gene list enrichment results. This class depends on
+#' a specific set of gene annotations represented by the class "GeneAnnotations".
+#' The enrichment calculated is based on the Fisher exact test and we give
+#' support to the usual multiple test adjustment methods.
+#'
+#' @slot gene_list The list of genes over which the enrichment is computed.
+#' @slot gene_annotations The object GeneAnnotations to which the enrichment
+#' refers.
+#' @slot raw_enrichment A data.frame with the enrichment results
 setClass("GeneListEnrichment",
          representation(gene_list = "character",
                         gene_annotations = "GeneAnnotations",
@@ -13,6 +24,20 @@ setClass("GeneListEnrichment",
                            ! is.null(object@gene_annotations))
          }
 )
+
+#' GeneListEnrichment constructor
+#'
+#' The constructor for GeneListEnrichment
+#'
+#' @param gene_list The list of genes over which the enrichment is computed.
+#' @param gene_annotations The object GeneAnnotations to which the enrichment
+#' refers.
+#'
+#' @return The GeneAnnotations object
+#'
+#' @examples
+#' TODO
+GeneListEnrichment <- function(...) new("GeneListEnrichment",...)
 
 ## Computes the enrichment with the Fisher test for every term
 .compute_enrichment <- function(gene_list, gene_annotations) {
@@ -57,14 +82,67 @@ setMethod("initialize",
               return(.Object)
           })
 
+
+#' get_significant_results()
+#'
+#' Function that gets the significant results from the enrichment results.
+#'
+#' @param x The GeneListEnrichment class on which the method will run.
+#' @param significance_thr The significance enrichment threshold
+#' @param adj_method The multiple test correction method (any of those supported
+#' by p.adjust())
+
+#' @return A data.frame with the significant results
+#'
+#'
+#' @examples
+#' TODO
 setGeneric("get_significant_results",
            signature = c("x", "significance_thr", "adj_method"),
-           function(x, significance_thr, adj_method) standardGeneric("get_significant_results"))
+           function(x, significance_thr, adj_method)
+               standardGeneric("get_significant_results"))
 
+#' @aliases get_significant_results
 setMethod("get_significant_results",
-          c("x" = "GeneListEnrichment", "significance_thr" = "numeric", "adj_method" = "character"),
+          c("x" = "GeneListEnrichment", "significance_thr" = "numeric",
+            "adj_method" = "character"),
           function(x, significance_thr, adj_method) {
               stopifnot(significance_thr >= 0 && significance_thr <= 1)
               x@raw_enrichment$adj_pvalue <- p.adjust(x@raw_enrichment$pvalue, method = adj_method)
               return(x@raw_enrichment[x@raw_enrichment$adj_pvalue <= significance_thr, ])
           })
+
+#' get_terms_clustering()
+#'
+#' Function that creates a new object of class TermsClustering. The clustering
+#' is performed on a significant set of enrichment results that is defined by
+#' the parameters passed to this function.
+#'
+#' @param x The GeneListEnrichment class on which the method will run.
+#' @param significance_threshold The significance enrichment threshold
+#' @param adj_method The multiple test correction method (any of those supported
+#' by p.adjust())
+
+#' @return An object of class TermsClustering
+#'
+#'
+#' @examples
+#' TODO
+setGeneric("get_terms_clustering",
+           signature = c("x", "distance_measure", "significance_threshold",
+                         "adj_method"),
+           function(x, distance_measure, significance_threshold, adj_method)
+               standardGeneric("get_terms_clustering"))
+
+#' @aliases get_terms_clustering
+setMethod("get_terms_clustering", c("x" = "GeneListEnrichment",
+                                    "distance_measure" = "character",
+                                    "significance_threshold" = "numeric",
+                                    "adj_method" = "character"),
+          function(x, distance_measure, significance_threshold, adj_method) {
+              return(TCGAome::TermsClustering(gene_list_enrichment = x,
+                                     distance_measure = distance_measure,
+                                     significance_thr = significance_threshold,
+                                     adj_method = adj_method))
+          })
+

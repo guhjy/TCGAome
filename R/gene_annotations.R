@@ -165,6 +165,22 @@ load_hpo <- function(
     return(hpo)
 }
 
+#' GeneAnnotations class
+#'
+#' An S4 class to represent a set of gene annotations built from
+#' tall-skinny table with the columns "Gene" and "Term". This class provides
+#' the functionality to compute several useful metrics based on the gene
+#' annotations: distance matrix, term frequency of annotation,
+#' functional similarity and enrichment.
+#'
+#' @slot raw_annotations A data.frame having columns "Gene" and "Term" that
+#' contains all annotations.
+#' @slot name The annotations name
+#' @slot gene2term A data.frame that stores the pivoted annotations across genes
+#' @slot term2gene A data.frame that stores the pivoted annotations across terms
+#' @slot max_term_freq The maximum frequency of annotations, that is the maximum
+#' number of terms associated to any gene
+#' @slot func_similarity_methods Stores the supported similarity methods
 setClass("GeneAnnotations",
          representation(raw_annotations = "data.frame",
                         name = "character",
@@ -181,6 +197,25 @@ setClass("GeneAnnotations",
              }
          )
 
+#' GeneAnnotations constructor
+#'
+#' The constructor for GeneAnnotations
+#'
+#' @param raw_annotations A data.frame having columns "Gene" and "Term" that
+#' contains all annotations.
+#' @param name The annotations name
+#'
+#' @return The GeneAnnotations object
+#'
+#' @examples
+#' uniKeys <- AnnotationDbi::keys(org.Hs.eg.db::org.Hs.eg.db, keytype="SYMBOL")
+#' cols <- c("PATH")
+#' kegg_raw <- AnnotationDbi::select(org.Hs.eg.db::org.Hs.eg.db, keys=uniKeys, columns=cols, keytype="SYMBOL")
+#' kegg_raw <- kegg_raw[, c(1, 2)]
+#' colnames(kegg_raw) <- c("Gene", "Term")
+#' kegg <- GeneAnnotations(raw_annotations = kegg_raw, name="KEGG-Human")
+GeneAnnotations <- function(...) new("GeneAnnotations",...)
+
 setMethod("initialize",
           signature(.Object = "GeneAnnotations"),
           function(.Object, raw_annotations, name){
@@ -196,10 +231,27 @@ setMethod("initialize",
           })
 
 
+#' get_term_freq()
+#'
+#' Function that gets the frequency of annotation of a specific term. That is
+#' the number of genes this term is associated to divided by the maximum term
+#' annotation.
+#'
+#' @param x The GeneAnnotations class on which the method will run.
+#' @param term The term on which we want the annotation frequency.
+
+#' @return The term's annotations frequency
+#'
+#'
+#' @examples
+#' kegg <- TCGAome::load_kegg()
+#' random_kegg_term = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
+#' get_term_freq(kegg, random_kegg_term)
 setGeneric("get_term_freq",
            signature = c("x", "term"),
            function(x, term) standardGeneric("get_term_freq"))
 
+#' @aliases get_term_freq
 setMethod("get_term_freq", c("x" = "GeneAnnotations", "term" = "character"),
           function(x, term) {
               ## FIXME: this maximum size might need to be normalized as it is way too high
@@ -208,11 +260,34 @@ setMethod("get_term_freq", c("x" = "GeneAnnotations", "term" = "character"),
               return(length(unlist(x@term2gene[x@term2gene$Term == term, ]$Gene)) / x@max_term_freq)
           })
 
+#' get_functional_similarity()
+#'
+#' Function that gets the functional similarity between two terms. That is
+#' a measure of the shared terms in the annotations resources. This functional
+#' similarity is implemented as a distance between binary vectors.
+#'
+#' @param x The GeneAnnotations class on which the method will run.
+#' @param term1 The first term on which to calculate the functional similarity.
+#' @param term2 The second term on which to calculate the functional similarity.
+#' @param distance_measure The binary distance method (one of UI, binary,
+#' bray-curtis, cosine)
 
+#' @return The functional similarity between term1 and term2
+#'
+#'
+#' @examples
+#' kegg <- TCGAome::load_kegg()
+#' random_kegg_term1 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
+#' random_kegg_term2 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
+#' get_functional_similarity(kegg, random_kegg_term1, random_kegg_term2, "cosine")
+#' get_functional_similarity(kegg, random_kegg_term1, random_kegg_term2, "binary")
+#' get_functional_similarity(kegg, random_kegg_term1, random_kegg_term2, "UI")
+#' get_functional_similarity(kegg, random_kegg_term1, random_kegg_term2, "bray-curtis")
 setGeneric("get_functional_similarity",
            signature = c("x", "term1", "term2", "distance_measure"),
            function(x, term1, term2, distance_measure) standardGeneric("get_functional_similarity"))
 
+#' @aliases get_functional_similarity
 setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
                                          "term1" = "character",
                                          "term2" = "character",
@@ -247,11 +322,29 @@ setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
               return(similarity)
           })
 
+#' get_term_distance_matrix()
+#'
+#' Function that returns the distance matrix between all the terms.
+#'
+#' @param x The GeneAnnotations class on which the method will run.
+#' @param term1 The first term on which to calculate the functional similarity.
+#' @param term2 The second term on which to calculate the functional similarity.
+#' @param distance_measure The binary distance method (one of UI, binary,
+#' bray-curtis, cosine)
+#' @param subset A subset of terms on which to calculate the distance matrix
 
+#' @return The distance matrix for the subset if provided or for all the terms
+#' otherwise
+#'
+#'
+#' @examples
+#' kegg <- TCGAome::load_kegg()
+#' get_term_distance_matrix(kegg, "cosine", NULL)
 setGeneric("get_term_distance_matrix",
            signature = c("x", "distance_measure", "subset"),
            function(x, distance_measure, subset) standardGeneric("get_term_distance_matrix"))
 
+#' @aliases get_term_distance_matrix
 setMethod("get_term_distance_matrix", c("x" = "GeneAnnotations",
                                         "distance_measure" = "character",
                                         "subset" = "character"),
@@ -282,14 +375,37 @@ setMethod("get_term_distance_matrix", c("x" = "GeneAnnotations",
               return(as.dist(distance_matrix))
           })
 
+#' get_enrichment()
+#'
+#' Function that returns an object of class GeneListEnrichment with the
+#' enrichment results on a given gene list on this gene annotations.
+#'
+#' @param x The GeneAnnotations class on which the method will run.
+#' @param gene_list The list of genes on which to calculate the enrichment.
 
+#' @return The enrichment results stored in an object of class
+#' GeneListEnrichment
+#'
+#'
+#' @examples
+#' kegg <- TCGAome::load_kegg()
+#' gene_list <- c("ZNF638", "HNRNPU", "PPIAL4G", "RAPH1", "USP7", "SUMO1P3",
+#' "TMEM189.UBE2V1", "ZNF837", "LPCAT4", "ZFPL1", "STAT3", "XRCC1",
+#' "STMN1", "PGR", "RB1", "KDR", "YBX1", "YAP1", "FOXO3", "SYK", "RAB17",
+#' "TTC8", "SLC22A5", "C3orf18", "ANKRA2", "LBR", "B3GNT5", "ANP32E",
+#' "JOSD1", "ZNF695", "ESR1", "INPP4B", "PDK1", "TSC2", "AR", "HSPA1A",
+#' "CDH3", "SMAD4", "CASP7", "GMPS", "NDC80", "EZH2", "MELK", "CDC45",
+#' "CRY2", "KLHDC1", "MEIS3P1", "FBXL5", "EHD2", "CCNB1", "GSK3A",
+#' "DVL3", "NFKB1", "COL6A1", "CCND1", "BAK1")
+#' get_enrichment(kegg, gene_list)
 setGeneric("get_enrichment",
            signature = c("x", "gene_list"),
            function(x, gene_list) standardGeneric("get_enrichment"))
 
+#' @aliases get_enrichment
 setMethod("get_enrichment", c("x" = "GeneAnnotations", "gene_list" = "character"),
           function(x, gene_list) {
-              return(new("GeneListEnrichment", gene_list = gene_list, gene_annotations = x))
+              return(TCGAome::GeneListEnrichment(gene_list = gene_list, gene_annotations = x))
           })
 
 
