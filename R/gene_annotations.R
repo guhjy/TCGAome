@@ -178,7 +178,7 @@ load_hpo <- function(
 #' @slot name The annotations name
 #' @slot gene2term A data.frame that stores the pivoted annotations across genes
 #' @slot term2gene A data.frame that stores the pivoted annotations across terms
-#' @slot max_term_freq The maximum frequency of annotations, that is the maximum
+#' @slot max_term_annotations The maximum frequency of annotations, that is the maximum
 #' number of terms associated to any gene
 #' @slot func_similarity_methods Stores the supported similarity methods
 setClass("GeneAnnotations",
@@ -186,14 +186,17 @@ setClass("GeneAnnotations",
                         name = "character",
                         gene2term = "data.frame",
                         term2gene = "data.frame",
-                        max_term_freq = "integer",
+                        max_term_annotations = "integer",
                         func_similarity_methods = "character"),
          prototype(
              raw_annotations = data.frame(),
              name = NA_character_),
          validity = function(object) {
              column_names = names(object@raw_annotations)
+             # Check that the annotations data frame has the expected column names
              stopifnot("Gene" %in% column_names & "Term" %in% column_names)
+             # Check that the annotations data frame is not empty
+             stopifnot(dim(object@raw_annotations)[1] > 0)
              }
          )
 
@@ -219,13 +222,17 @@ GeneAnnotations <- function(...) new("GeneAnnotations",...)
 setMethod("initialize",
           signature(.Object = "GeneAnnotations"),
           function(.Object, raw_annotations, name){
+              ## Avoids factor columns
+              raw_annotations$Gene <- as.character(raw_annotations$Gene)
+              raw_annotations$Term <- as.character(raw_annotations$Term)
               ## Removes entries with NA values
               .Object@raw_annotations <- raw_annotations[
                   !is.na(raw_annotations$Term) & !is.na(raw_annotations$Gene), ]
+              ## Sets slots
               .Object@name <- name
               .Object@gene2term <- aggregate(data = .Object@raw_annotations, Term ~ Gene, c)
               .Object@term2gene <- aggregate(data = .Object@raw_annotations, Gene ~ Term, c)
-              .Object@max_term_freq <- max(sapply(.Object@term2gene$Gene, length))
+              .Object@max_term_annotations <- max(sapply(.Object@term2gene$Gene, length))
               .Object@func_similarity_methods <- c("UI", "cosine", "bray-curtis", "binary")
               return(.Object)
           })
@@ -257,7 +264,7 @@ setMethod("get_term_freq", c("x" = "GeneAnnotations", "term" = "character"),
               ## FIXME: this maximum size might need to be normalized as it is way too high
               ## somehow avoid considering terms very high in the hierarchy
               stopifnot(term %in% x@term2gene$Term)
-              return(length(unlist(x@term2gene[x@term2gene$Term == term, ]$Gene)) / x@max_term_freq)
+              return(length(unlist(x@term2gene[x@term2gene$Term == term, ]$Gene)) / x@max_term_annotations)
           })
 
 #' get_functional_similarity()
@@ -331,7 +338,7 @@ setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
 #' @param term2 The second term on which to calculate the functional similarity.
 #' @param distance_measure The binary distance method (one of UI, binary,
 #' bray-curtis, cosine)
-#' @param subset A subset of terms on which to calculate the distance matrix
+#' @param terms_subset A subset of terms on which to calculate the distance matrix
 
 #' @return The distance matrix for the subset if provided or for all the terms
 #' otherwise
@@ -339,35 +346,35 @@ setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
 #'
 #' @examples
 #' kegg <- TCGAome::load_kegg()
-#' get_term_distance_matrix(kegg, "cosine", NULL)
+#' get_term_distance_matrix(kegg, "cosine")
 setGeneric("get_term_distance_matrix",
-           signature = c("x", "distance_measure", "subset"),
-           function(x, distance_measure, subset) standardGeneric("get_term_distance_matrix"))
+           signature = c("x", "distance_measure"),
+           function(x, distance_measure, ...) standardGeneric("get_term_distance_matrix"))
 
 #' @aliases get_term_distance_matrix
 setMethod("get_term_distance_matrix", c("x" = "GeneAnnotations",
-                                        "distance_measure" = "character",
-                                        "subset" = "character"),
-          function(x, distance_measure, subset) {
-              if (is.null(subset)) {
-                  all_terms <- x@term2gene$Term
-              } else {
-                  all_terms = subset
+                                        "distance_measure" = "character"),
+          function(x, distance_measure, ...) {
+              if (!exists("terms_subset") || is.null(terms_subset)) {
+                  terms_subset <- x@term2gene$Term
               }
               ## Initializes to 1 as diagonal elements will not be evaluated.
-              similarity_matrix <- data.frame(matrix(1, nrow = length(all_terms), ncol = length(all_terms)), stringsAsFactors = F)
-              rownames(similarity_matrix) <- all_terms
-              colnames(similarity_matrix) <- all_terms
+              similarity_matrix <- data.frame(matrix(1,
+                                                     nrow = length(terms_subset),
+                                                     ncol = length(terms_subset)),
+                                              stringsAsFactors = F)
+              rownames(similarity_matrix) <- terms_subset
+              colnames(similarity_matrix) <- terms_subset
               # Calculates similarity on pairwise comparisons without repetition
-              pairwise_term_combn <- combn(all_terms, 2)
+              pairwise_term_combn <- combn(terms_subset, 2)
               tallskinny_dist <- apply(pairwise_term_combn, 2, FUN = function(y) {
                   get_functional_similarity(
                       x, term1 = y[1], term2 = y[2], distance_measure = distance_measure)
                   })
-              idx <- rbind(cbind(match(pairwise_term_combn[1 , ], all_terms),
-                                 match(pairwise_term_combn[2 , ], all_terms)),
-                           cbind(match(pairwise_term_combn[2 , ], all_terms),
-                                 match(pairwise_term_combn[1 , ], all_terms)))
+              idx <- rbind(cbind(match(pairwise_term_combn[1 , ], terms_subset),
+                                 match(pairwise_term_combn[2 , ], terms_subset)),
+                           cbind(match(pairwise_term_combn[2 , ], terms_subset),
+                                 match(pairwise_term_combn[1 , ], terms_subset)))
               similarity_matrix[idx] <- tallskinny_dist
 
               # Converts similarity matrix into distance matrix

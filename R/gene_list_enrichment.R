@@ -98,18 +98,18 @@ setMethod("initialize",
 #' @examples
 #' TODO
 setGeneric("get_significant_results",
-           signature = c("x", "significance_thr", "adj_method"),
-           function(x, significance_thr, adj_method)
+           signature = c("x", "significance_threshold", "adj_method"),
+           function(x, significance_threshold, adj_method)
                standardGeneric("get_significant_results"))
 
 #' @aliases get_significant_results
 setMethod("get_significant_results",
-          c("x" = "GeneListEnrichment", "significance_thr" = "numeric",
+          c("x" = "GeneListEnrichment", "significance_threshold" = "numeric",
             "adj_method" = "character"),
-          function(x, significance_thr, adj_method) {
-              stopifnot(significance_thr >= 0 && significance_thr <= 1)
+          function(x, significance_threshold, adj_method) {
+              stopifnot(significance_threshold >= 0 && significance_threshold <= 1)
               x@raw_enrichment$adj_pvalue <- p.adjust(x@raw_enrichment$pvalue, method = adj_method)
-              return(x@raw_enrichment[x@raw_enrichment$adj_pvalue <= significance_thr, ])
+              return(x@raw_enrichment[x@raw_enrichment$adj_pvalue <= significance_threshold, ])
           })
 
 #' get_terms_clustering()

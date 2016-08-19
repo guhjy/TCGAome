@@ -1,0 +1,7 @@
+DEBUG [2016-08-19 11:09:05] Package folder: /media/sf_src/TCGAome/afolderthatdoesnotexist
+DEBUG [2016-08-19 11:09:05] Package folder: /media/sf_src/TCGAome/results_20160819_110905
+DEBUG [2016-08-19 11:09:05] Results folder: /media/sf_src/TCGAome/results_20160819_110905
+DEBUG [2016-08-19 11:09:05] Package folder: /media/sf_src/TCGAome/inst/GO/GOA/
+ERROR [2016-08-19 11:09:05] Non supported search universe [other]
+DEBUG [2016-08-19 11:09:05] Package folder: /media/sf_src/TCGAome/inst/HPO/
+DEBUG [2016-08-19 11:09:05] Loading HPO for the first time

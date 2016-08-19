@@ -15,7 +15,7 @@ NULL
 #'
 #' @slot gene_list_enrichment The object of class GeneListEnrichment that
 #' that contains the enrichment results
-#' @slot significance_thr The significance threshold applied to the enrichment
+#' @slot significance_threshold The significance threshold applied to the enrichment
 #' results. The significance threshold is a fixed value, if you want to modify
 #' it you would need to create another object.
 #' @slot adj_method The multiple test adjustment method. Methods supported are
@@ -27,7 +27,7 @@ NULL
 #' the given distance_measure
 setClass("TermsClustering",
          representation(gene_list_enrichment = "GeneListEnrichment",
-                        significance_thr = "numeric",
+                        significance_threshold = "numeric",
                         adj_method = "character",
                         significant_results = "data.frame",
                         distance_measure = "character",
@@ -35,12 +35,12 @@ setClass("TermsClustering",
          prototype(
              gene_list_enrichment = NULL,
              distance_measure = NULL,
-             significance_thr = 0.05,
+             significance_threshold = 0.05,
              adj_method = "none"),
          validity = function(object) {
              stopifnot(! is.null(gene_list_enrichment) &&
                            ! is.null(distance_measure) &&
-                           ! is.null(significance_thr) &&
+                           ! is.null(significance_threshold) &&
                            ! is.null(adj_method))
          }
 )
@@ -52,7 +52,7 @@ setClass("TermsClustering",
 #' @param gene_list_enrichment The object of class GeneListEnrichment that
 #' that contains the enrichment results
 #' @param distance_measure The distance measure employed for the clustering
-#' @param significance_thr The significance threshold applied to the enrichment
+#' @param significance_threshold The significance threshold applied to the enrichment
 #' results. The significance threshold is a fixed value, if you want to modify
 #' it you would need to create another object.
 #' @param adj_method The multiple test adjustment method. Methods supported are
@@ -113,7 +113,7 @@ TermsClustering <- function(...) new("TermsClustering",...)
 setMethod("initialize",
           signature(.Object = "TermsClustering"),
           function(.Object, gene_list_enrichment, distance_measure,
-                   significance_thr, adj_method){
+                   significance_threshold, adj_method){
 
               stopifnot(distance_measure %in% c("UI", "binary", "bray-curtis", "cosine"))
 
@@ -122,11 +122,11 @@ setMethod("initialize",
               .Object@distance_measure <- distance_measure
 
               ## Gets only significant enrichment results
-              significant_results <- get_significant_results(
-                  gene_list_enrichment, significance_thr, adj_method)
+              significant_results <- TCGAome::get_significant_results(
+                  gene_list_enrichment, significance_threshold, adj_method)
 
               ## Computes distance matrix
-              .Object@distance_matrix <- get_term_distance_matrix(
+              .Object@distance_matrix <- TCGAome::get_term_distance_matrix(
                   gene_list_enrichment@gene_annotations, distance_measure,
                   subset = significant_results$Term)
 
