@@ -4,15 +4,15 @@
 \alias{get_significant_results}
 \title{get_significant_results()}
 \usage{
-get_significant_results(x, significance_thr, adj_method)
+get_significant_results(x, significance_threshold, adj_method)
 }
 \arguments{
 \item{x}{The GeneListEnrichment class on which the method will run.}
 
-\item{significance_thr}{The significance enrichment threshold}
-
 \item{adj_method}{The multiple test correction method (any of those supported
 by p.adjust())}
+
+\item{significance_thr}{The significance enrichment threshold}
 }
 \value{
 A data.frame with the significant results

@@ -12,7 +12,7 @@ that contains the enrichment results}
 
 \item{distance_measure}{The distance measure employed for the clustering}
 
-\item{significance_thr}{The significance threshold applied to the enrichment
+\item{significance_threshold}{The significance threshold applied to the enrichment
 results. The significance threshold is a fixed value, if you want to modify
 it you would need to create another object.}
 

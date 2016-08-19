@@ -181,6 +181,9 @@ load_hpo <- function(
 #' @slot max_term_annotations The maximum frequency of annotations, that is the maximum
 #' number of terms associated to any gene
 #' @slot func_similarity_methods Stores the supported similarity methods
+#'
+#' @export
+#'
 setClass("GeneAnnotations",
          representation(raw_annotations = "data.frame",
                         name = "character",
@@ -209,6 +212,8 @@ setClass("GeneAnnotations",
 #' @param name The annotations name
 #'
 #' @return The GeneAnnotations object
+#'
+#' @export
 #'
 #' @examples
 #' uniKeys <- AnnotationDbi::keys(org.Hs.eg.db::org.Hs.eg.db, keytype="SYMBOL")
@@ -249,6 +254,7 @@ setMethod("initialize",
 
 #' @return The term's annotations frequency
 #'
+#' @export
 #'
 #' @examples
 #' kegg <- TCGAome::load_kegg()
@@ -259,6 +265,7 @@ setGeneric("get_term_freq",
            function(x, term) standardGeneric("get_term_freq"))
 
 #' @aliases get_term_freq
+#' @export
 setMethod("get_term_freq", c("x" = "GeneAnnotations", "term" = "character"),
           function(x, term) {
               ## FIXME: this maximum size might need to be normalized as it is way too high
@@ -281,6 +288,7 @@ setMethod("get_term_freq", c("x" = "GeneAnnotations", "term" = "character"),
 
 #' @return The functional similarity between term1 and term2
 #'
+#' @export
 #'
 #' @examples
 #' kegg <- TCGAome::load_kegg()
@@ -295,6 +303,7 @@ setGeneric("get_functional_similarity",
            function(x, term1, term2, distance_measure) standardGeneric("get_functional_similarity"))
 
 #' @aliases get_functional_similarity
+#' @export
 setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
                                          "term1" = "character",
                                          "term2" = "character",
@@ -343,6 +352,7 @@ setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
 #' @return The distance matrix for the subset if provided or for all the terms
 #' otherwise
 #'
+#' @export
 #'
 #' @examples
 #' kegg <- TCGAome::load_kegg()
@@ -352,6 +362,7 @@ setGeneric("get_term_distance_matrix",
            function(x, distance_measure, ...) standardGeneric("get_term_distance_matrix"))
 
 #' @aliases get_term_distance_matrix
+#' @export
 setMethod("get_term_distance_matrix", c("x" = "GeneAnnotations",
                                         "distance_measure" = "character"),
           function(x, distance_measure, ...) {
@@ -393,6 +404,7 @@ setMethod("get_term_distance_matrix", c("x" = "GeneAnnotations",
 #' @return The enrichment results stored in an object of class
 #' GeneListEnrichment
 #'
+#' @export
 #'
 #' @examples
 #' kegg <- TCGAome::load_kegg()
@@ -410,6 +422,7 @@ setGeneric("get_enrichment",
            function(x, gene_list) standardGeneric("get_enrichment"))
 
 #' @aliases get_enrichment
+#' @export
 setMethod("get_enrichment", c("x" = "GeneAnnotations", "gene_list" = "character"),
           function(x, gene_list) {
               return(TCGAome::GeneListEnrichment(gene_list = gene_list, gene_annotations = x))

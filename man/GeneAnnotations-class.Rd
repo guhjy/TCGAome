@@ -23,7 +23,7 @@ contains all annotations.}
 
 \item{\code{term2gene}}{A data.frame that stores the pivoted annotations across terms}
 
-\item{\code{max_term_freq}}{The maximum frequency of annotations, that is the maximum
+\item{\code{max_term_annotations}}{The maximum frequency of annotations, that is the maximum
 number of terms associated to any gene}
 
 \item{\code{func_similarity_methods}}{Stores the supported similarity methods}

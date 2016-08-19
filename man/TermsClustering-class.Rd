@@ -20,7 +20,7 @@ specific terms
 \item{\code{gene_list_enrichment}}{The object of class GeneListEnrichment that
 that contains the enrichment results}
 
-\item{\code{significance_thr}}{The significance threshold applied to the enrichment
+\item{\code{significance_threshold}}{The significance threshold applied to the enrichment
 results. The significance threshold is a fixed value, if you want to modify
 it you would need to create another object.}
 

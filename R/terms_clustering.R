@@ -25,6 +25,9 @@ NULL
 #' @slot distance_measure The distance measure employed for the clustering
 #' @slot distance_matrix The distance matrix between annotation terms by using
 #' the given distance_measure
+#'
+#' @export
+#'
 setClass("TermsClustering",
          representation(gene_list_enrichment = "GeneListEnrichment",
                         significance_threshold = "numeric",
@@ -59,6 +62,8 @@ setClass("TermsClustering",
 #' those supported by p.adjust()
 #'
 #' @return The TermsClustering object
+#'
+#' @export
 #'
 #' @examples
 #' TODO

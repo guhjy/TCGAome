@@ -12,6 +12,9 @@ NULL
 #' @slot gene_annotations The object GeneAnnotations to which the enrichment
 #' refers.
 #' @slot raw_enrichment A data.frame with the enrichment results
+#'
+#' @export
+#'
 setClass("GeneListEnrichment",
          representation(gene_list = "character",
                         gene_annotations = "GeneAnnotations",
@@ -34,6 +37,8 @@ setClass("GeneListEnrichment",
 #' refers.
 #'
 #' @return The GeneAnnotations object
+#'
+#' @export
 #'
 #' @examples
 #' TODO
@@ -94,6 +99,7 @@ setMethod("initialize",
 
 #' @return A data.frame with the significant results
 #'
+#' @export
 #'
 #' @examples
 #' TODO
@@ -103,6 +109,7 @@ setGeneric("get_significant_results",
                standardGeneric("get_significant_results"))
 
 #' @aliases get_significant_results
+#' @export
 setMethod("get_significant_results",
           c("x" = "GeneListEnrichment", "significance_threshold" = "numeric",
             "adj_method" = "character"),
@@ -125,6 +132,7 @@ setMethod("get_significant_results",
 
 #' @return An object of class TermsClustering
 #'
+#' @export
 #'
 #' @examples
 #' TODO
@@ -135,6 +143,7 @@ setGeneric("get_terms_clustering",
                standardGeneric("get_terms_clustering"))
 
 #' @aliases get_terms_clustering
+#' @export
 setMethod("get_terms_clustering", c("x" = "GeneListEnrichment",
                                     "distance_measure" = "character",
                                     "significance_threshold" = "numeric",
