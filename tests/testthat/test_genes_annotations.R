@@ -11,8 +11,11 @@ get_random_term <- function(gene_annotations) {
 ## Returns a random term with the given frequency
 get_term_by_freq <- function(gene_annotations, freq) {
     term_by_freq <- gene_annotations@term2gene[
-        sapply(gene_annotations@term2gene$Gene,
-               FUN= function(x) length(x) / gene_annotations@max_term_annotations) == freq, ]$Term
+        sapply(
+            gene_annotations@term2gene$Gene,
+            FUN= function(x)
+                length(x) / gene_annotations@max_term_annotations) == freq,
+        ]$Term
     random_term <- term_by_freq[runif(1, min = 1, max = length(term_by_freq))]
     return(random_term)
 }
@@ -105,8 +108,9 @@ test_annotations_methods <- function(gene_annotations) {
 
     for (distance_measure in gene_annotations@func_similarity_methods) {
         ## Gets distance matrix over all terms
-        term_distance_matrix <- TCGAome::get_term_distance_matrix(gene_annotations,
-                                          distance_measure = distance_measure)
+        term_distance_matrix <- TCGAome::get_term_distance_matrix(
+            gene_annotations,
+            distance_measure = distance_measure)
 
     }
 }
@@ -114,7 +118,8 @@ test_annotations_methods <- function(gene_annotations) {
 test_annotations_slots <- function(gene_annotations) {
     testthat::expect_is(gene_annotations, "GeneAnnotations")
     testthat::expect_is(gene_annotations@raw_annotations, "data.frame")
-    testthat::expect_equal(colnames(gene_annotations@raw_annotations), c("Gene", "Term"))
+    testthat::expect_equal(
+        colnames(gene_annotations@raw_annotations), c("Gene", "Term"))
     testthat::expect_is(gene_annotations@raw_annotations$Gene, "character")
     testthat::expect_is(gene_annotations@raw_annotations$Term, "character")
     testthat::expect_is(gene_annotations@gene2term, "data.frame")
@@ -132,6 +137,10 @@ test_annotations_slots <- function(gene_annotations) {
     testthat::expect_is(gene_annotations@max_term_annotations, "integer")
     testthat::expect_gt(gene_annotations@max_term_annotations, 0)
 }
+
+################################################################################
+## Constructor tests
+################################################################################
 
 test_that("load_goa()", {
     testthat::skip("test takes too long")
@@ -161,13 +170,18 @@ test_that("load_goa(uniprot)", {
     test_annotations_methods(uniprot_goa)
 })
 
-test_that("load_goa(other)", {
+test_that("load_goa(searc_universe = other)", {
     ## Loads a GOA for a non supported universe
-    other_goa <- TCGAome::load_goa(search_universe = "other")
-    testthat::expect_null(other_goa)
+    testthat::expect_error(TCGAome::load_goa(search_universe = "other"))
+})
+
+test_that("load_goa(ontology = whatever)", {
+    ## Loads a GOA for a non supported universe
+    testthat::expect_error(TCGAome::load_goa(ontology = "whatever"))
 })
 
 test_that("load_hpo()", {
+    testthat::skip("test takes too long")
     ## Loads HPO for a first time
     hpo <- TCGAome::load_hpo()
     ## Test slots
@@ -181,6 +195,7 @@ test_that("load_hpo()", {
 })
 
 test_that("load_kegg()", {
+    testthat::skip("test takes too long")
     ## Loads KEGG for a first time
     kegg <- TCGAome::load_kegg()
     ## Test slots
@@ -194,6 +209,7 @@ test_that("load_kegg()", {
 })
 
 test_that("load_omim()", {
+    testthat::skip("test takes too long")
     ## Loads omim for a first time
     omim <- TCGAome::load_omim()
     ## Test slots
@@ -205,6 +221,10 @@ test_that("load_omim()", {
     ## Test methods
     test_annotations_methods(omim)
 })
+
+################################################################################
+## Constructor tests
+################################################################################
 
 test_that("empty annotations", {
     empty_annotations <- data.frame(Gene = c(), Term = c())
@@ -218,10 +238,56 @@ test_that("wrong columns", {
 })
 
 test_that("random annotations", {
-    random_annotations <- get_random_annotations(10000)
+    random_annotations <- get_random_annotations(1000)
     random <- TCGAome::GeneAnnotations(random_annotations, "random")
     ## Test slots
     test_annotations_slots(random)
     ## Test methods
     test_annotations_methods(random)
+})
+
+################################################################################
+## get_term_distance_matrix tests
+################################################################################
+
+test_that("get_term_distance_matrix", {
+    random_annotations <- get_random_annotations(100)
+    random <- TCGAome::GeneAnnotations(random_annotations, "random")
+    expected_terms <- random@term2gene$Term
+    for (distance_measure in random@func_similarity_methods) {
+        random_dist <- TCGAome::get_term_distance_matrix(
+            random, distance_measure = distance_measure)
+        observed_terms <- attr(random_dist, "Labels")
+        testthat::expect_is(random_dist, "dist")
+        testthat::expect_true(
+            length(expected_terms) == length(intersect(expected_terms,
+                                                       observed_terms)))
+    }
+    testthat::expect_error(TCGAome::get_term_distance_matrix(
+        random, distance_measure = "non_supported"))
+})
+
+test_that("get_term_distance_matrix subset", {
+    random_annotations <- get_random_annotations(100)
+    random <- TCGAome::GeneAnnotations(random_annotations, "random")
+    expected_terms <- sample(random@term2gene$Term, 5)
+    for (distance_measure in random@func_similarity_methods) {
+        random_dist <- TCGAome::get_term_distance_matrix(
+            random,
+            distance_measure = distance_measure,
+            subset = expected_terms)
+        observed_terms <- attr(random_dist, "Labels")
+        testthat::expect_is(random_dist, "dist")
+        testthat::expect_true(
+            length(expected_terms) == length(intersect(expected_terms,
+                                                       observed_terms)))
+    }
+    testthat::expect_error(TCGAome::get_term_distance_matrix(
+        random, distance_measure = "non_supported"))
+})
+
+test_that("get_term_distance_matrix only one term", {
+    one_row_annotations <- data.frame(Gene = "GENE1", Term = "GO:0001")
+    testthat::expect_error(
+        TCGAome::GeneAnnotations(one_row_annotations, "one_row"))
 })

@@ -24,6 +24,13 @@ load_goa <- function(search_universe = "human",
                      ontology = "BP",
                      goa_uniprot_annotations_url = "http://geneontology.org/gene-associations/gene_association.goa_uniprot_noiea.gz") {
 
+    if (! search_universe %in% c("human", "uniprot")) {
+        stop("Invalid value for search_universe. Expected one of ['human', 'uniprot']")
+    }
+    if (! ontology %in% c("BP", "CC", "MF")) {
+        stop("Invalid value for ontology. Expected one of ['BP', 'CC', 'MF']")
+    }
+
     ## get and create working folder
     goa_annotations_folder <- TCGAome::get_goa_folder()
     goa = NULL
@@ -65,8 +72,6 @@ load_goa <- function(search_universe = "human",
         } else {
             futile.logger::flog.debug("Loading cached uniprot GOA")
         }
-    } else {
-        futile.logger::flog.error("Non supported search universe [%s]", search_universe)
     }
 
     return(goa)
@@ -191,15 +196,29 @@ setClass("GeneAnnotations",
                         term2gene = "data.frame",
                         max_term_annotations = "integer",
                         func_similarity_methods = "character"),
-         prototype(
-             raw_annotations = data.frame(),
-             name = NA_character_),
+         #prototype(
+         #    raw_annotations = data.frame(),
+         #    name = NA_character_),
          validity = function(object) {
-             column_names = names(object@raw_annotations)
-             # Check that the annotations data frame has the expected column names
-             stopifnot("Gene" %in% column_names & "Term" %in% column_names)
-             # Check that the annotations data frame is not empty
-             stopifnot(dim(object@raw_annotations)[1] > 0)
+                 errors <- character()
+                 # Check that the annotations data frame has the expected column names
+                 column_names = names(object@raw_annotations)
+                 if (! "Gene" %in% column_names | ! "Term" %in% column_names){
+                     msg <- paste("Column names should contain columns 'Gene' and 'Term'. Columns found [", str(column_names), "]", sep = "")
+                     errors <- c(errors, msg)
+                 }
+                 # Check that the annotations data frame is not empty
+                 if (dim(object@raw_annotations)[1] == 0){
+                     msg <- paste("Empty annotations")
+                     errors <- c(errors, msg)
+                 }
+                 # Check that there are at least 2 terms
+                 if (length(unique(object@raw_annotations$Term)) < 2){
+                     msg <- paste("Annotations with at least 2 terms are required")
+                     errors <- c(errors, msg)
+                 }
+
+                 if (length(errors) == 0) TRUE else errors
              }
          )
 
@@ -233,12 +252,15 @@ setMethod("initialize",
               ## Removes entries with NA values
               .Object@raw_annotations <- raw_annotations[
                   !is.na(raw_annotations$Term) & !is.na(raw_annotations$Gene), ]
+              ## Checks object validity
+              validObject(.Object)
               ## Sets slots
               .Object@name <- name
               .Object@gene2term <- aggregate(data = .Object@raw_annotations, Term ~ Gene, c)
               .Object@term2gene <- aggregate(data = .Object@raw_annotations, Gene ~ Term, c)
               .Object@max_term_annotations <- max(sapply(.Object@term2gene$Gene, length))
               .Object@func_similarity_methods <- c("UI", "cosine", "bray-curtis", "binary")
+
               return(.Object)
           })
 
@@ -270,7 +292,9 @@ setMethod("get_term_freq", c("x" = "GeneAnnotations", "term" = "character"),
           function(x, term) {
               ## FIXME: this maximum size might need to be normalized as it is way too high
               ## somehow avoid considering terms very high in the hierarchy
-              stopifnot(term %in% x@term2gene$Term)
+              if (! term %in% x@term2gene$Term) {
+                  stop(paste("Term ", term, " not present in the annotations", sep = ""))
+              }
               return(length(unlist(x@term2gene[x@term2gene$Term == term, ]$Gene)) / x@max_term_annotations)
           })
 
@@ -309,10 +333,16 @@ setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
                                          "term2" = "character",
                                          "distance_measure" = "character"),
           function(x, term1, term2, distance_measure) {
-              #TODO: check valid methods
-              stopifnot(term1 %in% x@term2gene$Term &&
-                            term2 %in% x@term2gene$Term &&
-                            distance_measure %in% x@func_similarity_methods)
+              if (! distance_measure %in% x@func_similarity_methods) {
+                  stop(paste("Non supported distance measure ", distance_measure, sep=""))
+              }
+              if (! term1 %in% x@term2gene$Term) {
+                  stop(paste("Term ", term1, " not present in the annotations", sep = ""))
+              }
+              if (! term2 %in% x@term2gene$Term) {
+                  stop(paste("Term ", term2, " not present in the annotations", sep = ""))
+              }
+
               term1_genes <- x@term2gene[x@term2gene$Term == term1, c("Gene")][[1]]
               term2_genes <- x@term2gene[x@term2gene$Term == term2, c("Gene")][[1]]
               # calculates the union
@@ -366,6 +396,11 @@ setGeneric("get_term_distance_matrix",
 setMethod("get_term_distance_matrix", c("x" = "GeneAnnotations",
                                         "distance_measure" = "character"),
           function(x, distance_measure, ...) {
+
+              if (! distance_measure %in% x@func_similarity_methods) {
+                  stop(paste("Non supported distance measure ", distance_measure, sep=""))
+              }
+
               if (!exists("terms_subset") || is.null(terms_subset)) {
                   terms_subset <- x@term2gene$Term
               }
