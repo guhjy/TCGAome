@@ -333,21 +333,15 @@ setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
                                          "term2" = "character",
                                          "distance_measure" = "character"),
           function(x, term1, term2, distance_measure) {
-              if (! distance_measure %in% x@func_similarity_methods) {
-                  stop(paste("Non supported distance measure ", distance_measure, sep=""))
-              }
               if (! term1 %in% x@term2gene$Term) {
                   stop(paste("Term ", term1, " not present in the annotations", sep = ""))
               }
               if (! term2 %in% x@term2gene$Term) {
                   stop(paste("Term ", term2, " not present in the annotations", sep = ""))
               }
-
               term1_genes <- x@term2gene[x@term2gene$Term == term1, c("Gene")][[1]]
               term2_genes <- x@term2gene[x@term2gene$Term == term2, c("Gene")][[1]]
-              # calculates the union
-              term_union <- union(term1_genes, term2_genes)
-              if (length(term_union) == 0 | length(term1_genes) == 0 | length(term2_genes) == 0) {
+              if (length(term1_genes) == 0 | length(term2_genes) == 0) {
                   # When no genes associated to any term they are disimilar
                   similarity <- 0.0
               } else {
@@ -355,14 +349,18 @@ setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
                   term_intersection <- intersect(term1_genes, term2_genes)
                   # calculates the different similarity metrics
                   if (distance_measure == "binary") {
+                      term_union <- union(term1_genes, term2_genes)
                       term_xor <- term_union[!term_union %in% term_intersection]
                       similarity <- length(term_xor) / length(x@gene2term$Gene)
                   } else if (distance_measure == "UI") {
+                      term_union <- union(term1_genes, term2_genes)
                       similarity <- length(term_intersection) / length(term_union)
                   } else if (distance_measure == "bray-curtis") {
                       similarity <- ( 2 * length(term_intersection) ) / ( length(term1_genes) + length(term2_genes) )
                   } else if (distance_measure == "cosine") {
                       similarity <- length(term_intersection) / ( sqrt(length(term1_genes) * length(term2_genes)) )
+                  } else {
+                      stop(paste("Non supported distance measure ", distance_measure, sep=""))
                   }
               }
               return(similarity)

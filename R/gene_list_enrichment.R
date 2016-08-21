@@ -23,8 +23,19 @@ setClass("GeneListEnrichment",
              gene_list = c(),
              gene_annotations = NULL),
          validity = function(object) {
-             stopifnot(length(object@gene_list[!is.na(object@gene_list)]) > 0 &&
-                           ! is.null(object@gene_annotations))
+             errors <- character()
+
+             # Check that there are at least 2 terms
+             if (length(object@gene_list[!is.na(object@gene_list)]) < 1) {
+                 msg <- "Empty gene_list provided"
+                 errors <- c(errors, msg)
+             }
+             if (is.null(object@gene_annotations)) {
+                 msg <- "Empty gene annotations"
+                 errors <- c(errors, msg)
+             }
+
+             if (length(errors) == 0) TRUE else errors
          }
 )
 
@@ -68,6 +79,9 @@ setMethod("initialize",
               ## Initialize input data
               .Object@gene_list <- gene_list[!is.na(gene_list)]
               .Object@gene_annotations <- gene_annotations
+
+              ## Checks object validity
+              validObject(.Object)
 
               ## Computes enrichment
               pvalues <- .compute_enrichment(.Object@gene_list, gene_annotations)

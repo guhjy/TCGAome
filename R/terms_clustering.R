@@ -41,10 +41,36 @@ setClass("TermsClustering",
              significance_threshold = 0.05,
              adj_method = "none"),
          validity = function(object) {
-             stopifnot(! is.null(gene_list_enrichment) &&
-                           ! is.null(distance_measure) &&
-                           ! is.null(significance_threshold) &&
-                           ! is.null(adj_method))
+             errors <- character()
+
+             # Check that there are at least 2 terms
+             if (is.null(object@gene_list_enrichment) ) {
+                 msg <- "Empty gene_list_enrichment provided"
+                 errors <- c(errors, msg)
+             }
+             func_similarity_methods <-
+                 object@gene_list_enrichment@gene_annotations@func_similarity_methods
+             if (! object@distance_measure %in% func_similarity_methods) {
+                 msg <- paste(
+                     "Not supported distance_measure",
+                     object@distance_measure, ". Use one of ",
+                     str(func_similarity_methods),
+                     sep="")
+                 errors <- c(errors, msg)
+             }
+             if (is.null(object@significance_threshold) ||
+                 object@significance_threshold < 0 ||
+                 object@significance_threshold > 1) {
+                 msg <- paste("Not supported significance_threshold", object@significance_threshold, sep="")
+                 errors <- c(errors, msg)
+             }
+             if (! object@adj_method %in% p.adjust.methods) {
+                 msg <- paste("Not supported adj_method ", object@adj_method,
+                              ". Use one of ", str(p.adjust.methods), sep="")
+                 errors <- c(errors, msg)
+             }
+
+             if (length(errors) == 0) TRUE else errors
          }
 )
 
@@ -120,11 +146,14 @@ setMethod("initialize",
           function(.Object, gene_list_enrichment, distance_measure,
                    significance_threshold, adj_method){
 
-              stopifnot(distance_measure %in% c("UI", "binary", "bray-curtis", "cosine"))
-
               ## Initialize input data
               .Object@gene_list_enrichment <- gene_list_enrichment
               .Object@distance_measure <- distance_measure
+              .Object@significance_threshold <- significance_threshold
+              .Object@adj_method <- adj_method
+
+              ## Checks object validity
+              validObject(.Object)
 
               ## Gets only significant enrichment results
               significant_results <- TCGAome::get_significant_results(
