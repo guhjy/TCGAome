@@ -1,4 +1,4 @@
-context("Tests genes_annotations.R")
+context("Tests gene_annotations.R")
 source("helper_functions.R")
 
 ## Test all term-level methods
@@ -97,7 +97,7 @@ test_annotations_slots <- function(gene_annotations) {
 }
 
 ################################################################################
-## Constructor tests
+## Predefined constructor tests
 ################################################################################
 
 test_that("load_goa()", {
@@ -233,12 +233,12 @@ test_that("get_term_distance_matrix subset", {
         random_dist <- TCGAome::get_term_distance_matrix(
             random,
             distance_measure = distance_measure,
-            subset = expected_terms)
+            terms_subset = expected_terms)
         observed_terms <- attr(random_dist, "Labels")
         testthat::expect_is(random_dist, "dist")
         testthat::expect_true(
-            length(expected_terms) == length(intersect(expected_terms,
-                                                       observed_terms)))
+            length(union(expected_terms, observed_terms)) ==
+                length(intersect(expected_terms, observed_terms)))
     }
     testthat::expect_error(TCGAome::get_term_distance_matrix(
         random, distance_measure = "non_supported"))

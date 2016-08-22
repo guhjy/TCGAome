@@ -30,10 +30,6 @@ setClass("GeneListEnrichment",
                  msg <- "Empty gene_list provided"
                  errors <- c(errors, msg)
              }
-             if (is.null(object@gene_annotations)) {
-                 msg <- "Empty gene annotations"
-                 errors <- c(errors, msg)
-             }
 
              if (length(errors) == 0) TRUE else errors
          }
@@ -77,11 +73,14 @@ setMethod("initialize",
           signature(.Object = "GeneListEnrichment"),
           function(.Object, gene_list, gene_annotations){
               ## Initialize input data
-              .Object@gene_list <- gene_list[!is.na(gene_list)]
+              .Object@gene_list <- gene_list
               .Object@gene_annotations <- gene_annotations
 
               ## Checks object validity
               validObject(.Object)
+
+              ## Clear NA_character genes
+              .Object@gene_list <- .Object@gene_list[!is.na(.Object@gene_list)]
 
               ## Computes enrichment
               pvalues <- .compute_enrichment(.Object@gene_list, gene_annotations)
@@ -95,7 +94,6 @@ setMethod("initialize",
               .Object@raw_enrichment <- data.frame(
                   Term = all_terms,
                   pvalue = pvalues,
-                  #freq = freqs,
                   row.names = NULL, stringsAsFactors = F)
 
               return(.Object)
@@ -128,7 +126,12 @@ setMethod("get_significant_results",
           c("x" = "GeneListEnrichment", "significance_threshold" = "numeric",
             "adj_method" = "character"),
           function(x, significance_threshold, adj_method) {
-              stopifnot(significance_threshold >= 0 && significance_threshold <= 1)
+              if (significance_threshold < 0 || significance_threshold > 1) {
+                  stop(paste("Not valid significance threshold '", significance_threshold, "'. It must be in the range [0, 1]", sep = ""))
+              }
+              if (! adj_method %in% p.adjust.methods) {
+                  stop(paste("Non supported p-value adjustment method: '", adj_method, "'", sep=""))
+              }
               x@raw_enrichment$adj_pvalue <- p.adjust(x@raw_enrichment$pvalue, method = adj_method)
               return(x@raw_enrichment[x@raw_enrichment$adj_pvalue <= significance_threshold, ])
           })

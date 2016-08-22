@@ -44,10 +44,6 @@ setClass("TermsClustering",
              errors <- character()
 
              # Check that there are at least 2 terms
-             if (is.null(object@gene_list_enrichment) ) {
-                 msg <- "Empty gene_list_enrichment provided"
-                 errors <- c(errors, msg)
-             }
              func_similarity_methods <-
                  object@gene_list_enrichment@gene_annotations@func_similarity_methods
              if (! object@distance_measure %in% func_similarity_methods) {
@@ -152,38 +148,42 @@ setMethod("initialize",
               .Object@significance_threshold <- significance_threshold
               .Object@adj_method <- adj_method
 
-              ## Checks object validity
-              validObject(.Object)
-
               ## Gets only significant enrichment results
-              significant_results <- TCGAome::get_significant_results(
+              .Object@significant_results <- TCGAome::get_significant_results(
                   gene_list_enrichment, significance_threshold, adj_method)
 
               ## Computes distance matrix
               .Object@distance_matrix <- TCGAome::get_term_distance_matrix(
                   gene_list_enrichment@gene_annotations, distance_measure,
-                  subset = significant_results$Term)
+                  terms_subset = .Object@significant_results$Term)
+
+              ## Checks object validity
+              validObject(.Object)
 
               ## Computes clustering
               clusters <- TCGAome::.pam_clustering(
                   .Object@distance_matrix)
-              significant_results <- merge(significant_results, clusters, by = "Term")
+              .Object@significant_results <- merge(
+                  .Object@significant_results,
+                  clusters,
+                  by = "Term")
 
               ## Computes MDS
               mds <- TCGAome::.multidimensional_scaling(
                   .Object@distance_matrix)
-              significant_results <- merge(significant_results, mds, by = "Term")
+              .Object@significant_results <- merge(
+                  .Object@significant_results,
+                  mds,
+                  by = "Term")
 
               ## Retrieves the frequency of annotation
-              significant_results$Freq <- sapply(
-                  significant_results$Term,
+              .Object@significant_results$Freq <- sapply(
+                  .Object@significant_results$Term,
                   FUN = function(term) {
                       TCGAome::get_term_freq(
                       gene_list_enrichment@gene_annotations, term)
                       }
                   )
-
-              .Object@significant_results <- significant_results
 
               return(.Object)
           })

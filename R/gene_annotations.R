@@ -371,8 +371,6 @@ setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
 #' Function that returns the distance matrix between all the terms.
 #'
 #' @param x The GeneAnnotations class on which the method will run.
-#' @param term1 The first term on which to calculate the functional similarity.
-#' @param term2 The second term on which to calculate the functional similarity.
 #' @param distance_measure The binary distance method (one of UI, binary,
 #' bray-curtis, cosine)
 #' @param terms_subset A subset of terms on which to calculate the distance matrix
@@ -387,13 +385,13 @@ setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
 #' get_term_distance_matrix(kegg, "cosine")
 setGeneric("get_term_distance_matrix",
            signature = c("x", "distance_measure"),
-           function(x, distance_measure, ...) standardGeneric("get_term_distance_matrix"))
+           function(x, distance_measure, ..., terms_subset = NULL) standardGeneric("get_term_distance_matrix"))
 
 #' @aliases get_term_distance_matrix
 #' @export
 setMethod("get_term_distance_matrix", c("x" = "GeneAnnotations",
                                         "distance_measure" = "character"),
-          function(x, distance_measure, ...) {
+          function(x, distance_measure, ..., terms_subset = NULL) {
 
               if (! distance_measure %in% x@func_similarity_methods) {
                   stop(paste("Non supported distance measure ", distance_measure, sep=""))
@@ -402,6 +400,11 @@ setMethod("get_term_distance_matrix", c("x" = "GeneAnnotations",
               if (!exists("terms_subset") || is.null(terms_subset)) {
                   terms_subset <- x@term2gene$Term
               }
+
+              if (length(terms_subset) < 2) {
+                  stop("Cannot compute distance matrix on less than two terms")
+              }
+
               ## Initializes to 1 as diagonal elements will not be evaluated.
               similarity_matrix <- data.frame(matrix(1,
                                                      nrow = length(terms_subset),

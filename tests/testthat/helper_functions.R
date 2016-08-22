@@ -40,3 +40,18 @@ get_random_annotations <- function(size) {
         Gene = sample(genes, size = size, replace = TRUE),
         Term = sample(terms, size = size, replace = TRUE)))
 }
+
+# Returns a random GeneListEnrichment object
+get_random_enrichment <- function(size, size_random_gene_list) {
+    random_annotations <- get_random_annotations(size)
+    random <- TCGAome::GeneAnnotations(random_annotations, "random")
+    random_genes <- sample(random@gene2term$Gene, 10)
+    random_enrichment <- TCGAome::GeneListEnrichment(
+        gene_list = random_genes,
+        gene_annotations = random)
+}
+
+# Returns the significance threshold for n most significant terms
+get_significance_threshold <- function(pvalues, n) {
+    max(pvalues[order(pvalues)[1:n]])
+}
