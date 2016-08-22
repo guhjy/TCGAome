@@ -1,0 +1,139 @@
+---
+title: "Enrichment Analysis & Dimensionality Reduction"
+author: "Pablo Riesgo"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Enrichment Analysis & Dimensionality Reduction}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, collapse = TRUE, comment = "#>")
+devtools::load_all()
+```
+
+## Using Object Oriented (OO) programming
+
+Using OO allows achieving **high cohesion** and **low coupling**, which facilitates all the software development cycle from development to maintenance, including testing. Following the principle **"Don't repeat yourself"** (https://en.wikipedia.org/wiki/Don't_repeat_yourself) is also enhanced with a good OO design. There are 3 OO models in R, we will be using S4 as it is the model most used in Bioconductor. Furthermore, we want to foster **code reuse** from existing Bioconductor S4 classes.
+
+![Enrichment class model](figures/enrichment_class_model.png)
+
+## Annotations
+
+This model allows us to support multiple annotations for enrichment. So far the supported annotations based on AnnotationDbi data source and some custom resources are:
+
+* Gene Ontology (from org.Hs.eg.db)
+* KEGG pathways (from org.Hs.eg.db)
+* OMIM diseases (from org.Hs.eg.db)
+* HPO phenotypes (from http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastStableBuild/artifact/annotation/ALL_SOURCES_TYPICAL_FEATURES_phenotype_to_genes.txt)
+
+These annotations can be loaded as follows:
+```{r, eval=FALSE}
+goa <- TCGAome::load_goa()
+kegg <- TCGAome::load_kegg()
+omim <- TCGAome::load_omim()
+hpo <- TCGAome::load_hpo()
+```
+
+The object created contains the following information:
+```{r, warning=FALSE, message=FALSE}
+kegg <- TCGAome::load_kegg()
+str(kegg, list.len = 5, vec.len = 5)
+```
+
+### Metrics
+
+For any term within the **TCGAome::GeneAnnotations** object we can obtain its **relative frequency** of annotation, which might be useful to compute the **Information Content** within a term.
+
+```{r, warning=FALSE, message=FALSE}
+random_kegg_term = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
+random_kegg_term
+TCGAome::get_term_freq(kegg, random_kegg_term) 
+```
+
+For any two terms within the GeneAnnotations object we can obtain its **functional similarity** based on the binary distances implemented in TCGAome.
+
+```{r, warning=FALSE, message=FALSE}
+random_kegg_term1 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
+random_kegg_term2 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
+random_kegg_term1
+random_kegg_term2
+TCGAome::get_functional_similarity(kegg, random_kegg_term1, random_kegg_term2, distance_measure = "UI")
+```
+
+The supported binary distances are: UI, cosine, Bray-Curtis and binary.
+
+This model should be extended to support **semantic similarity** measures based on the ontology structure. This is a special case for some of these annotation resources which are also backed by an ontology, like GO and HPO. On the previous implementation of TCGAome we used **GoSemSim** for the semantic similarity within GO terms. We need to study if this can be easily extended to other ontologies.
+
+### Extend annotation support
+
+It is relatively simple to extend the support to additional annotations, we just need to provide the association between genes and terms in a tall-skinny data frame with columns "Gene" and "Term".
+```{r, eval=FALSE}
+uniKeys <- AnnotationDbi::keys(org.Hs.eg.db::org.Hs.eg.db, keytype="SYMBOL")
+cols <- c("PATH")
+kegg_raw <- AnnotationDbi::select(org.Hs.eg.db::org.Hs.eg.db, keys=uniKeys, columns=cols, keytype="SYMBOL")
+kegg_raw <- kegg_raw[, c(1, 2)]
+colnames(kegg_raw) <- c("Gene", "Term")
+kegg <- GeneAnnotations(raw_annotations = kegg_raw, name="KEGG-Human")
+```
+
+
+## Enrichment
+
+The previous TCGAome version used the package **topGO** for computing the enrichment of GO terms. This package is limited to GO. The computation employed was a Fisher's test, we were not making use of the advanced functionality in topGO. Thus, in order to gain flexibility the enrichment computation was reimplemented inside the class **TCGAome::GeneListEnrichment**.
+
+We can compute enrichment for a given list of genes based on a preloaded annotation:
+
+```{r, warning=FALSE, message=FALSE}
+gene_list <- c("ZNF638", "HNRNPU", "PPIAL4G", "RAPH1", "USP7", "SUMO1P3",
+          "TMEM189.UBE2V1", "ZNF837", "LPCAT4", "ZFPL1", "STAT3", "XRCC1",
+          "STMN1", "PGR", "RB1", "KDR", "YBX1", "YAP1", "FOXO3", "SYK", "RAB17",
+          "TTC8", "SLC22A5", "C3orf18", "ANKRA2", "LBR", "B3GNT5", "ANP32E",
+          "JOSD1", "ZNF695", "ESR1", "INPP4B", "PDK1", "TSC2", "AR", "HSPA1A",
+          "CDH3", "SMAD4", "CASP7", "GMPS", "NDC80", "EZH2", "MELK", "CDC45",
+          "CRY2", "KLHDC1", "MEIS3P1", "FBXL5", "EHD2", "CCNB1", "GSK3A",
+          "DVL3", "NFKB1", "COL6A1", "CCND1", "BAK1")
+kegg_enrichment <- TCGAome::get_enrichment(kegg, gene_list = gene_list)
+str(kegg_enrichment, list.len = 5, vec.len = 5)
+```
+
+Or alternatively:
+```{r, eval=FALSE}
+kegg_enrichment <- GeneListEnrichment(gene_annotations = kegg, gene_list = gene_list)
+```
+
+And extract significant results:
+
+```{r, warning=FALSE, message=FALSE}
+TCGAome::get_significant_results(kegg_enrichment, significance_thr = 0.05, adj_method = "none")
+```
+
+
+## Visualizing enrichment results (clustering + MDS)
+
+To visualize enriched terms we use a dimensionality reduction approach based on clustering our results, select then a representative member of each cluster and plot them into 2D by using multidimensional scaling.
+
+Tu run this pipeline we need to create an object of type "TermsClustering" as follows:
+
+```{r, warning=FALSE, message=FALSE}
+kegg_term_clustering <- TermsClustering(kegg_enrichment, "UI", significance_thr = 0.05, adj_method = "none")
+str(kegg_term_clustering@distance_matrix, vec.len = 5)
+str(kegg_term_clustering@significant_results, vec.len = 5)
+```
+
+Or alternatively:
+```{r, warning=FALSE, message=FALSE, eval=FALSE}
+kegg_term_clustering <- get_terms_clustering(kegg_enrichment, "UI", significance_thr = 0.05, adj_method = "none")
+```
+
+
+```{r, warning=FALSE, message=FALSE}
+plot(kegg_term_clustering@significant_results$x, 
+     kegg_term_clustering@significant_results$y, 
+     col = kegg_term_clustering@significant_results$Cluster, 
+     cex = log(kegg_term_clustering@significant_results$Freq * 100), 
+     pch=20)
+```
+

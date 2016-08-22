@@ -38,7 +38,9 @@ License: MIT
 LazyData: true
 RoxygenNote: 5.0.1
 Suggests:
-    testthat
+    testthat,
+    knitr,
+    rmarkdown
 Collate:
     'biomart.R'
     'config.R'
@@ -53,3 +55,4 @@ Collate:
     'preprocessing.R'
     'tcga_download.R'
     'terms_clustering.R'
+VignetteBuilder: knitr
