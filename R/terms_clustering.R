@@ -238,7 +238,7 @@ setMethod("initialize",
               return(.Object)
           })
 
-.plot_scatter <- function(significant_results, all, x_label, y_label, pvalue_threshold) {
+.plot_scatter <- function(significant_results, all, pvalue_threshold) {
     ## Prepares the ellipses per cluster
     data_ell <- data.frame()
     for(cluster in unique(significant_results$Cluster)){
@@ -288,7 +288,7 @@ setMethod("initialize",
                              group = Cluster),
                 size = 0.2,
                 linetype = 2,
-                colour = I("black"))
+                colour = I("blue"))
 
         # Plots all terms in a cluster other than representatives
         plot <- plot + ggplot2::geom_point(
@@ -330,16 +330,11 @@ setMethod("initialize",
         # Size by frequency of annotation
         ggplot2::scale_size(
             "Frequency",
-            range = c(3, 5),
+            range = c(2, 4),
             breaks = c(1, 2, 3),
             labels = c("< 5%", "5-10%", "> 10%"),
             #trans = "log",
             guide = ggplot2::guide_legend(override.aes = list(colour = "gray"))) +
-        # Axis labels
-        ggplot2::labs(y = y_label, x = x_label) +
-        # Title
-        ggplot2::ggtitle(
-            "Enriched terms clustering + MDS") +
         ggplot2::theme_bw()
 
     plot
@@ -392,6 +387,39 @@ setMethod("initialize",
 }
 
 
+.multiplot_shared_legend <- function(...,
+                                     nrow = 1,
+                                     ncol = length(list(...)),
+                                     position = c("bottom", "right")) {
+    plots <- list(...)
+    position <- match.arg(position)
+    g <- ggplot2::ggplotGrob(
+        plots[[1]] + ggplot2::theme(legend.position = position))$grobs
+    legend <- g[[which(sapply(g, function(x) x$name) == "guide-box")]]
+    lheight <- sum(legend$height)
+    lwidth <- sum(legend$width)
+    gl <- lapply(plots, function(x) {
+        x + ggplot2::theme(legend.position = "none")
+        })
+    gl <- c(gl, nrow = nrow, ncol = ncol)
+
+    combined <- switch(position,
+                       "bottom" = gridExtra::arrangeGrob(
+                           do.call(gridExtra::arrangeGrob, gl),
+                           legend,
+                           ncol = 1,
+                           heights = unit.c(unit(1, "npc") - lheight, lheight)),
+                       "right" = gridExtra::arrangeGrob(
+                           do.call(gridExtra::arrangeGrob, gl),
+                           legend,
+                           ncol = 2,
+                           widths = unit.c(unit(1, "npc") - lwidth, lwidth)))
+    grid.newpage()
+    grid.draw(combined)
+
+}
+
+
 
 setGeneric("plot_scatter",
            signature = c("x", "all"),
@@ -405,28 +433,31 @@ setMethod("plot_scatter",
                   3,
                   "Spectral"))
 
-              # Plots components 1 and 2
+              ## Plots components 1 and 2
               x@significant_results$x <- x@significant_results$pc1
               x@significant_results$y <- x@significant_results$pc2
               plot1 = .plot_scatter(x@significant_results, all,
-                                    x_label = "Comp 1",
-                                    y_label = "Comp 2",
                                     pvalue_threshold = x@significance_threshold)
-              # Plots components 1 and 3
+              plot1 <- plot1 + ggplot2::labs(x = "Comp 1", y = "Comp 2")
+                  #ggplot2::ggtitle("MDS components 1 and 2")
+
+              ## Plots components 1 and 3
               x@significant_results$x <- x@significant_results$pc1
               x@significant_results$y <- x@significant_results$pc3
               plot2 = .plot_scatter(x@significant_results, all,
-                                    x_label = "Comp 1",
-                                    y_label = "Comp 3",
                                     pvalue_threshold = x@significance_threshold)
-              # Plots components 2 and 3
+              plot2 <- plot2 + ggplot2::labs(x = "Comp 1", y = "Comp 3")
+                  #ggplot2::ggtitle("MDS components 1 and 3")
+
+              ## Plots components 2 and 3
               x@significant_results$x <- x@significant_results$pc2
               x@significant_results$y <- x@significant_results$pc3
               plot3 = .plot_scatter(x@significant_results, all,
-                                    x_label = "Comp 2",
-                                    y_label = "Comp 3",
                                     pvalue_threshold = x@significance_threshold)
+              plot3 <- plot3 + ggplot2::labs(x = "Comp 2", y = "Comp 3")
+                  #ggplot2::ggtitle("MDS components 2 and 3")
 
+              ## Plots explained variance
               plot4 <- ggplot2::ggplot(data = x@explained_variance,
                                        ggplot2::aes(x = component,
                                            y = explained_variance)) +
@@ -438,10 +469,12 @@ setMethod("plot_scatter",
                                      linetype = 2) +
                   ggplot2::scale_x_continuous(
                       breaks=x@explained_variance$component) +
+                  ggplot2::scale_y_continuous(label = scales::percent) +
                   ggplot2::labs(y = "Explained variance", x = "Component") +
-                  ggplot2::theme_bw() +
-                  ggplot2::ggtitle("Explained variance")
+                  ggplot2::theme_bw()
+                  #ggplot2::ggtitle("Explained variance")
 
 
-              .multiplot(plot1, plot3, plot2, plot4, cols = 2)
+              #.multiplot(plot1, plot3, plot2, plot4, cols = 2)
+              .multiplot_shared_legend(plot1, plot2, plot3, plot4, nrow = 2, ncol = 2, position = "right")
           })
