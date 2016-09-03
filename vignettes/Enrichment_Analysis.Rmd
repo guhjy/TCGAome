@@ -76,7 +76,7 @@ cols <- c("PATH")
 kegg_raw <- AnnotationDbi::select(org.Hs.eg.db::org.Hs.eg.db, keys=uniKeys, columns=cols, keytype="SYMBOL")
 kegg_raw <- kegg_raw[, c(1, 2)]
 colnames(kegg_raw) <- c("Gene", "Term")
-kegg <- GeneAnnotations(raw_annotations = kegg_raw, name="KEGG-Human")
+kegg <- TCGAome::GeneAnnotations(raw_annotations = kegg_raw, name="KEGG-Human")
 ```
 
 
@@ -101,7 +101,7 @@ str(kegg_enrichment, list.len = 5, vec.len = 5)
 
 Or alternatively:
 ```{r, eval=FALSE}
-kegg_enrichment <- GeneListEnrichment(gene_annotations = kegg, gene_list = gene_list)
+kegg_enrichment <- TCGAome::GeneListEnrichment(gene_annotations = kegg, gene_list = gene_list)
 ```
 
 And extract significant results:
@@ -118,22 +118,18 @@ To visualize enriched terms we use a dimensionality reduction approach based on 
 Tu run this pipeline we need to create an object of type "TermsClustering" as follows:
 
 ```{r, warning=FALSE, message=FALSE}
-kegg_term_clustering <- TermsClustering(kegg_enrichment, "UI", significance_thr = 0.05, adj_method = "none")
+kegg_term_clustering <- TCGAome::TermsClustering(kegg_enrichment, "UI", significance_thr = 0.05, adj_method = "none")
 str(kegg_term_clustering@distance_matrix, vec.len = 5)
 str(kegg_term_clustering@significant_results, vec.len = 5)
 ```
 
 Or alternatively:
 ```{r, warning=FALSE, message=FALSE, eval=FALSE}
-kegg_term_clustering <- get_terms_clustering(kegg_enrichment, "UI", significance_thr = 0.05, adj_method = "none")
+kegg_term_clustering <- TCGAome::get_terms_clustering(kegg_enrichment, "UI", significance_thr = 0.05, adj_method = "none")
 ```
 
-
+Plot results:
 ```{r, warning=FALSE, message=FALSE}
-plot(kegg_term_clustering@significant_results$x, 
-     kegg_term_clustering@significant_results$y, 
-     col = kegg_term_clustering@significant_results$Cluster, 
-     cex = log(kegg_term_clustering@significant_results$Freq * 100), 
-     pch=20)
+TCGAome::plot_scatter(kegg_term_clustering, all = TRUE)
 ```
 

@@ -34,7 +34,8 @@ setClass("TermsClustering",
                         adj_method = "character",
                         significant_results = "data.frame",
                         distance_measure = "character",
-                        distance_matrix = "dist"),
+                        distance_matrix = "dist",
+                        explained_variance = "data.frame"),
          prototype(
              gene_list_enrichment = NULL,
              distance_measure = NULL,
@@ -116,25 +117,63 @@ TermsClustering <- function(...) new("TermsClustering",...)
 
 ## Multidimensional Scaling
 .multidimensional_scaling <- function(distance) {
+    # TODO: return explained variance for each component
     number_elements <- attr(distance, "Size")
     if (number_elements < 2) {
-        x <- rep(0, number_elements)
-        y <- rep(0, number_elements)
+        pc1 <- rep(0, number_elements)
+        pc2 <- rep(0, number_elements)
+        pc3 <- rep(0, number_elements)
+        explained_variance = c(1, 0, 0)
     } else if (number_elements == 2) {
-        x <- c(-distance[1] / 2, distance[1] / 2)
-        y <- rep(0, number_elements)
+        pc1 <- c(-distance[1] / 2, distance[1] / 2)
+        pc2 <- rep(0, number_elements)
+        pc3 <- rep(0, number_elements)
+        explained_variance = c(1, 0, 0)
     } else {
-        fit <- cmdscale(distance, eig = TRUE, k = 2)
-        x <- fit$points[, 1]
+        fit <- cmdscale(distance, eig = TRUE, k = 3)
+        pc1 <- fit$points[, 1]
         if (dim(fit$points)[2] > 1) {
-            y <- fit$points[, 2]
+            pc2 <- fit$points[, 2]
         } else {
-            y <- rep(0, length(x))
+            pc2 <- rep(0, length(x))
             names(y) <- names(x)
         }
+        if (dim(fit$points)[2] > 2) {
+            pc3 <- fit$points[, 3]
+        } else {
+            pc3 <- rep(0, length(x))
+            names(z) <- names(x)
+        }
+        explained_variance = fit$eig / sum(fit$eig)
     }
-    return(data.frame(Term = names(x), x = x, y = y,
-                      stringsAsFactors = F))
+    return(list(
+        mds = data.frame(Term = names(pc1), pc1 = pc1, pc2 = pc2, pc3 = pc3,
+                      stringsAsFactors = F),
+        explained_variance = data.frame(
+            component = 1:length(explained_variance),
+            explained_variance = explained_variance)))
+}
+
+## Selects the cluster representatives based on significance and frequency
+.select_representatives <- function(significant_results, freq_threshold = 0.05) {
+    representatives <- as.data.frame(t(sapply(
+        unique(significant_results$Cluster),
+        FUN = function(cluster) {
+            candidates <- significant_results[
+                significant_results$Cluster == cluster
+                & significant_results$Freq <= freq_threshold, ]
+            if (nrow(candidates) == 0) {
+                candidates <- significant_results[
+                    significant_results$Cluster == cluster,
+                    ]
+            }
+            list(
+                Cluster = cluster,
+                Representative_term =
+                    candidates[
+                        which.min(candidates$adj_pvalue), "Term"])
+        })))
+    return(representatives)
 }
 
 setMethod("initialize",
@@ -173,8 +212,9 @@ setMethod("initialize",
                   .Object@distance_matrix)
               .Object@significant_results <- merge(
                   .Object@significant_results,
-                  mds,
+                  mds$mds,
                   by = "Term")
+              .Object@explained_variance <- mds$explained_variance
 
               ## Retrieves the frequency of annotation
               .Object@significant_results$Freq <- sapply(
@@ -185,15 +225,223 @@ setMethod("initialize",
                       }
                   )
 
+              ## Select the representative term for every cluster
+              representatives <- .select_representatives(
+                  .Object@significant_results)
+              .Object@significant_results <- merge(
+                  .Object@significant_results,
+                  representatives,
+                  by = "Cluster")
+
+              #TODO: compute MDS again just on representatives
+
               return(.Object)
           })
 
+.plot_scatter <- function(significant_results, all, x_label, y_label, pvalue_threshold) {
+    ## Prepares the ellipses per cluster
+    data_ell <- data.frame()
+    for(cluster in unique(significant_results$Cluster)){
+
+        data_cluster <- significant_results[
+            significant_results$Cluster==cluster,]
+
+        if (length(data_cluster$x) > 1) {
+            data_points <- as.data.frame(
+                ellipse::ellipse(
+                    cor(data_cluster$x, data_cluster$y),
+                    scale=c(sd(data_cluster$x),
+                            sd(data_cluster$y)),
+                    centre=c(mean(data_cluster$x),
+                             mean(data_cluster$y))))
+        } else {
+            r <- 0.1
+            theta <- sort(2*pi*runif(30))
+            data_points <- data.frame(
+                x = c(data_cluster$x + r*sin(theta)),
+                y = c(data_cluster$y + r*cos(theta)))
+        }
+        data_ell <- rbind(
+            data_ell,
+            cbind(data_points, Cluster=cluster))
+    }
+
+    ## Bins frequency for proper representation
+    significant_results$Freq_binned = with(
+        significant_results,
+        ifelse(Freq < 0.05, 1,
+               ifelse(Freq <= 0.1, 2, 3)))
+
+    ## Prepares term datasets
+    representatives_data <- significant_results[significant_results$Term == significant_results$Representative_term, ]
+    others_data <- significant_results[significant_results$Term != significant_results$Representative_term, ]
+
+    plot <- ggplot2::ggplot(data = representatives_data)
+
+    if (all) {
+        plot <- plot +
+            # Plot an ellipse around each cluster
+            ggplot2::geom_path(
+                data = data_ell,
+                ggplot2::aes(x = x,
+                             y = y,
+                             group = Cluster),
+                size = 0.2,
+                linetype = 2,
+                colour = I("black"))
+
+        # Plots all terms in a cluster other than representatives
+        plot <- plot + ggplot2::geom_point(
+            data = others_data,
+            ggplot2::aes(x = x,
+                         y = y,
+                         colour = adj_pvalue,
+                         size = Freq_binned),
+            #colour = I("gray"),
+            shape = I(21))
+    }
+
+    plot <- plot +
+        # Plots representative terms
+        ggplot2::geom_point(
+            data = representatives_data,
+            ggplot2::aes(x = x,
+                         y = y,
+                         colour = adj_pvalue,
+                         size = Freq_binned),
+            shape = I(16),
+            alpha = I(0.85)) +
+        # Labels representative terms
+        ggplot2::geom_text(
+            data = representatives_data,
+            ggplot2::aes(x = x,
+                         y = y,
+                         label = Term),
+            colour = I(ggplot2::alpha("black", 0.85)),
+            size = 3,
+            nudge_y = -0.03,
+            vjust = "inward",
+            hjust = "inward") +
+        # Colours by p-value
+        ggplot2::scale_colour_gradientn(
+            "Significance",
+            colours = my_palette(5),
+            limits = c(0, pvalue_threshold)) +
+        # Size by frequency of annotation
+        ggplot2::scale_size(
+            "Frequency",
+            range = c(3, 5),
+            breaks = c(1, 2, 3),
+            labels = c("< 5%", "5-10%", "> 10%"),
+            #trans = "log",
+            guide = ggplot2::guide_legend(override.aes = list(colour = "gray"))) +
+        # Axis labels
+        ggplot2::labs(y = y_label, x = x_label) +
+        # Title
+        ggplot2::ggtitle(
+            "Enriched terms clustering + MDS") +
+        ggplot2::theme_bw()
+
+    plot
+}
+
+# Multiple plot function
+#
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+.multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+    library(grid)
+
+    # Make a list from the ... arguments and plotlist
+    plots <- c(list(...), plotlist)
+
+    numPlots = length(plots)
+
+    # If layout is NULL, then use 'cols' to determine layout
+    if (is.null(layout)) {
+        # Make the panel
+        # ncol: Number of columns of plots
+        # nrow: Number of rows needed, calculated from # of cols
+        layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                         ncol = cols, nrow = ceiling(numPlots/cols))
+    }
+
+    if (numPlots==1) {
+        print(plots[[1]])
+
+    } else {
+        # Set up the page
+        grid.newpage()
+        pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+        # Make each plot, in the correct location
+        for (i in 1:numPlots) {
+            # Get the i,j matrix positions of the regions that contain this subplot
+            matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+            print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                            layout.pos.col = matchidx$col))
+        }
+    }
+}
+
+
+
 setGeneric("plot_scatter",
-           signature = c("x"),
-           function(x) standardGeneric("plot_scatter"))
+           signature = c("x", "all"),
+           function(x, all) standardGeneric("plot_scatter"))
 
 setMethod("plot_scatter",
-          c("x" = "TermsClustering"),
-          function(x) {
-              NULL
+          c("x" = "TermsClustering", "all" = "logical"),
+          function(x, all=FALSE) {
+
+              my_palette <- colorRampPalette(RColorBrewer::brewer.pal(
+                  3,
+                  "Spectral"))
+
+              # Plots components 1 and 2
+              x@significant_results$x <- x@significant_results$pc1
+              x@significant_results$y <- x@significant_results$pc2
+              plot1 = .plot_scatter(x@significant_results, all,
+                                    x_label = "Comp 1",
+                                    y_label = "Comp 2",
+                                    pvalue_threshold = x@significance_threshold)
+              # Plots components 1 and 3
+              x@significant_results$x <- x@significant_results$pc1
+              x@significant_results$y <- x@significant_results$pc3
+              plot2 = .plot_scatter(x@significant_results, all,
+                                    x_label = "Comp 1",
+                                    y_label = "Comp 3",
+                                    pvalue_threshold = x@significance_threshold)
+              # Plots components 2 and 3
+              x@significant_results$x <- x@significant_results$pc2
+              x@significant_results$y <- x@significant_results$pc3
+              plot3 = .plot_scatter(x@significant_results, all,
+                                    x_label = "Comp 2",
+                                    y_label = "Comp 3",
+                                    pvalue_threshold = x@significance_threshold)
+
+              plot4 <- ggplot2::ggplot(data = x@explained_variance,
+                                       ggplot2::aes(x = component,
+                                           y = explained_variance)) +
+                  ggplot2::geom_point(
+                      shape = I(16),
+                      size = 3) +
+                  ggplot2::geom_line(colour="blue",
+                                     size = 0.2,
+                                     linetype = 2) +
+                  ggplot2::scale_x_continuous(
+                      breaks=x@explained_variance$component) +
+                  ggplot2::labs(y = "Explained variance", x = "Component") +
+                  ggplot2::theme_bw() +
+                  ggplot2::ggtitle("Explained variance")
+
+
+              .multiplot(plot1, plot3, plot2, plot4, cols = 2)
           })
