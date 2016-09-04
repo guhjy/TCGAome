@@ -13,8 +13,6 @@ NULL
 #' specific terms
 #' (3) the MultiDimensional Scaling (MDS) results on the cluster representatives
 #'
-#' @slot gene_list_enrichment The object of class GeneListEnrichment that
-#' that contains the enrichment results
 #' @slot significance_threshold The significance threshold applied to the enrichment
 #' results. The significance threshold is a fixed value, if you want to modify
 #' it you would need to create another object.
@@ -33,17 +31,15 @@ NULL
 #' @export
 #'
 setClass("TermsClustering",
-         representation(gene_list_enrichment = "GeneListEnrichment",
+         representation(distance_measure = "character",
                         significance_threshold = "numeric",
                         adj_method = "character",
                         max_clusters = "numeric",
                         significant_results = "data.frame",
-                        distance_measure = "character",
                         distance_matrix = "dist",
                         explained_variance = "data.frame",
                         silhouette = "data.frame"),
          prototype(
-             gene_list_enrichment = NULL,
              distance_measure = NULL,
              significance_threshold = 0.05,
              adj_method = "none",
@@ -52,16 +48,17 @@ setClass("TermsClustering",
              errors <- character()
 
              # Check that there are at least 2 terms
-             func_similarity_methods <-
-                 object@gene_list_enrichment@gene_annotations@func_similarity_methods
-             if (! object@distance_measure %in% func_similarity_methods) {
-                 msg <- paste(
-                     "Not supported distance_measure",
-                     object@distance_measure, ". Use one of ",
-                     str(func_similarity_methods),
-                     sep="")
-                 errors <- c(errors, msg)
-             }
+             #FIXME: fix this
+             #func_similarity_methods <-
+             #    object@gene_list_enrichment@gene_annotations@func_similarity_methods
+             #if (! object@distance_measure %in% func_similarity_methods) {
+             #    msg <- paste(
+             #        "Not supported distance_measure",
+             #        object@distance_measure, ". Use one of ",
+             #        str(func_similarity_methods),
+             #        sep="")
+             #    errors <- c(errors, msg)
+             #}
              if (is.null(object@significance_threshold) ||
                  object@significance_threshold < 0 ||
                  object@significance_threshold > 1) {
@@ -119,6 +116,8 @@ TermsClustering <- function(...) new("TermsClustering",...)
     if (is.null(max_clusters) | max_clusters == 0) {
         max_clusters <- attr(distance, "Size") - 1
     }
+    max_clusters <- min(max_clusters,
+                       attr(distance, "Size") - 1)
     ## Finds the optimal number of clusters by silhouette analysis
     sil_width <- sapply(2:max_clusters, FUN = function(x) cluster::pam(distance, x)$silinfo$avg.width)
     names(sil_width) <- 2:max_clusters
@@ -201,11 +200,10 @@ TermsClustering <- function(...) new("TermsClustering",...)
 
 setMethod("initialize",
           signature(.Object = "TermsClustering"),
-          function(.Object, gene_list_enrichment, distance_measure,
+          function(.Object, gene_annotations, gene_list_enrichment, distance_measure,
                    significance_threshold, adj_method, max_clusters){
 
               ## Initialize input data
-              .Object@gene_list_enrichment <- gene_list_enrichment
               .Object@distance_measure <- distance_measure
               .Object@significance_threshold <- significance_threshold
               .Object@adj_method <- adj_method
@@ -216,7 +214,7 @@ setMethod("initialize",
 
               ## Computes distance matrix
               .Object@distance_matrix <- TCGAome::get_term_distance_matrix(
-                  gene_list_enrichment@gene_annotations, distance_measure,
+                  gene_annotations, distance_measure,
                   terms_subset = .Object@significant_results$Term)
 
               ## Checks object validity
@@ -246,7 +244,7 @@ setMethod("initialize",
                   .Object@significant_results$Term,
                   FUN = function(term) {
                       TCGAome::get_term_freq(
-                          gene_list_enrichment@gene_annotations, term)
+                          gene_annotations, term)
                   }
               )
 

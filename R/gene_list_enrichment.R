@@ -9,19 +9,16 @@ NULL
 #' support to the usual multiple test adjustment methods.
 #'
 #' @slot gene_list The list of genes over which the enrichment is computed.
-#' @slot gene_annotations The object GeneAnnotations to which the enrichment
-#' refers.
 #' @slot raw_enrichment A data.frame with the enrichment results
 #'
 #' @export
 #'
 setClass("GeneListEnrichment",
          representation(gene_list = "character",
-                        gene_annotations = "GeneAnnotations",
                         raw_enrichment = "data.frame"),
          prototype(
              gene_list = c(),
-             gene_annotations = NULL),
+             raw_enrichment = data.frame()),
          validity = function(object) {
              errors <- character()
 
@@ -74,7 +71,6 @@ setMethod("initialize",
           function(.Object, gene_list, gene_annotations){
               ## Initialize input data
               .Object@gene_list <- gene_list
-              .Object@gene_annotations <- gene_annotations
 
               ## Checks object validity
               validObject(.Object)
@@ -143,6 +139,8 @@ setMethod("get_significant_results",
 #' the parameters passed to this function.
 #'
 #' @param x The GeneListEnrichment class on which the method will run.
+#' @param gene_annotations The GeneAnnotations on which the enrichment was computed.
+#' @param distance_measure The similarity distance metric employed.
 #' @param significance_threshold The significance enrichment threshold
 #' @param adj_method The multiple test correction method (any of those supported
 #' by p.adjust())
@@ -154,21 +152,31 @@ setMethod("get_significant_results",
 #' @examples
 #' TODO
 setGeneric("get_terms_clustering",
-           signature = c("x", "distance_measure", "significance_threshold",
-                         "adj_method"),
-           function(x, distance_measure, significance_threshold, adj_method)
+           signature = c("x", "gene_annotations", "distance_measure",
+                         "significance_threshold",
+                         "adj_method",
+                         "max_clusters"),
+           function(x, gene_annotations, distance_measure,
+                    significance_threshold, adj_method, max_clusters)
                standardGeneric("get_terms_clustering"))
 
 #' @aliases get_terms_clustering
 #' @export
 setMethod("get_terms_clustering", c("x" = "GeneListEnrichment",
+                                    "gene_annotations" = "GeneAnnotations",
                                     "distance_measure" = "character",
                                     "significance_threshold" = "numeric",
-                                    "adj_method" = "character"),
-          function(x, distance_measure, significance_threshold, adj_method) {
-              return(TCGAome::TermsClustering(gene_list_enrichment = x,
-                                     distance_measure = distance_measure,
-                                     significance_thr = significance_threshold,
-                                     adj_method = adj_method))
+                                    "adj_method" = "character",
+                                    "max_clusters" = "numeric"),
+          function(x, gene_annotations, distance_measure,
+                   significance_threshold, adj_method, max_clusters) {
+              return(TCGAome::TermsClustering(
+                  gene_annotations = gene_annotations,
+                  gene_list_enrichment = x,
+                  distance_measure = distance_measure,
+                  significance_thr = significance_threshold,
+                  adj_method = adj_method,
+                  max_clusters = max_clusters)
+              )
           })
 
