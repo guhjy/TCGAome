@@ -118,18 +118,39 @@ To visualize enriched terms we use a dimensionality reduction approach based on 
 Tu run this pipeline we need to create an object of type "TermsClustering" as follows:
 
 ```{r, warning=FALSE, message=FALSE}
-kegg_term_clustering <- TCGAome::TermsClustering(kegg_enrichment, "UI", significance_thr = 0.05, adj_method = "none")
+kegg_term_clustering <- TCGAome::TermsClustering(kegg_enrichment, "cosine", significance_thr = 0.05, adj_method = "none", max_clusters = 10)
 str(kegg_term_clustering@distance_matrix, vec.len = 5)
 str(kegg_term_clustering@significant_results, vec.len = 5)
 ```
 
 Or alternatively:
 ```{r, warning=FALSE, message=FALSE, eval=FALSE}
-kegg_term_clustering <- TCGAome::get_terms_clustering(kegg_enrichment, "UI", significance_thr = 0.05, adj_method = "none")
+kegg_term_clustering <- TCGAome::get_terms_clustering(kegg_enrichment, "cosine", significance_thr = 0.05, adj_method = "none")
 ```
 
 Plot results:
-```{r, warning=FALSE, message=FALSE}
+```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 TCGAome::plot_scatter(kegg_term_clustering, all = TRUE)
 ```
 
+And do the same for other resources:
+```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+goa <- TCGAome::load_goa()
+goa_enrichment <- TCGAome::get_enrichment(goa, gene_list = gene_list)
+goa_term_clustering <- TCGAome::TermsClustering(goa_enrichment, "cosine", significance_thr = 0.05, adj_method = "none", max_clusters = 10)
+TCGAome::plot_scatter(goa_term_clustering, all = TRUE)
+```
+
+```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+hpo <- TCGAome::load_hpo()
+hpo_enrichment <- TCGAome::get_enrichment(hpo, gene_list = gene_list)
+hpo_term_clustering <- TCGAome::TermsClustering(hpo_enrichment, "cosine", significance_thr = 0.05, adj_method = "none", max_clusters = 10)
+TCGAome::plot_scatter(hpo_term_clustering, all = TRUE)
+```
+
+```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+omim <- TCGAome::load_omim()
+omim_enrichment <- TCGAome::get_enrichment(omim, gene_list = gene_list)
+omim_term_clustering <- TCGAome::TermsClustering(omim_enrichment, "cosine", significance_thr = 0.05, adj_method = "none", max_clusters = 10)
+TCGAome::plot_scatter(omim_term_clustering, all = TRUE)
+```
