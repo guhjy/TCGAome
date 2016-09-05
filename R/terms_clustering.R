@@ -26,6 +26,8 @@ NULL
 #' the given distance_measure
 #' @slot explained_variance The percentage of variance explained by each MDS
 #' component
+#' @slot explained_variance_repr The percentage of variance explained by each
+#' MDS component computed only to cluster representatives
 #' @slot silhouette The silhouette average width for each number of clusters
 #'
 #' @export
@@ -38,6 +40,7 @@ setClass("TermsClustering",
                         significant_results = "data.frame",
                         distance_matrix = "dist",
                         explained_variance = "data.frame",
+                        explained_variance_repr = "data.frame",
                         silhouette = "data.frame"),
          prototype(
              distance_measure = NULL,
@@ -191,7 +194,7 @@ TermsClustering <- function(...) new("TermsClustering",...)
             }
             list(
                 Cluster = cluster,
-                Representative_term =
+                repr_term =
                     candidates[
                         which.min(candidates$adj_pvalue), "Term"])
         })))
@@ -257,6 +260,21 @@ setMethod("initialize",
                   by = "Cluster")
 
               #TODO: compute MDS again just on representatives
+              distance_matrix_repr <- as.dist(as.matrix(
+                  .Object@distance_matrix)[
+                      unlist(representatives$repr_term),
+                      unlist(representatives$repr_term)])
+              mds_repr <- TCGAome::.multidimensional_scaling(
+                  distance_matrix_repr)
+              names(mds_repr$mds) = c("Term", "pc1_repr",
+                                      "pc2_repr", "pc3_repr")
+
+              .Object@significant_results <- merge(
+                  .Object@significant_results,
+                  mds_repr$mds,
+                  by = "Term",
+                  all = TRUE)
+              .Object@explained_variance_repr <- mds_repr$explained_variance
 
               return(.Object)
           })
@@ -298,8 +316,8 @@ setMethod("initialize",
                ifelse(Freq <= 0.1, 2, 3)))
 
     ## Prepares term datasets
-    representatives_data <- significant_results[significant_results$Term == significant_results$Representative_term, ]
-    others_data <- significant_results[significant_results$Term != significant_results$Representative_term, ]
+    representatives_data <- significant_results[significant_results$Term == significant_results$repr_term, ]
+    others_data <- significant_results[significant_results$Term != significant_results$repr_term, ]
 
     my_palette <- colorRampPalette(RColorBrewer::brewer.pal(
         3,
@@ -320,13 +338,13 @@ setMethod("initialize",
                 colour = I("blue"))
 
         # Plots all terms in a cluster other than representatives
-        plot <- plot + ggplot2::geom_point(
-            data = others_data,
-            ggplot2::aes(x = x,
-                         y = y,
-                         colour = adj_pvalue,
-                         size = Freq),
-            #colour = I("gray"),
+        plot <- plot +
+            ggplot2::geom_point(
+                data = others_data,
+                ggplot2::aes(x = x,
+                             y = y,
+                             colour = adj_pvalue,
+                             size = Freq),
             shape = I(21))
     }
 
@@ -474,28 +492,40 @@ setMethod("plot_mds",
           function(x, all=FALSE) {
 
               ## Plots components 1 and 2
-              x@significant_results$y <- x@significant_results$pc1
-              x@significant_results$x <- x@significant_results$pc2
+              if (all) {
+                  x@significant_results$y <- x@significant_results$pc1
+                  x@significant_results$x <- x@significant_results$pc2
+              } else {
+                  x@significant_results$y <- x@significant_results$pc1_repr
+                  x@significant_results$x <- x@significant_results$pc2_repr
+              }
               plot1 = .plot_scatter(x@significant_results, all,
                                     pvalue_threshold = x@significance_threshold)
               plot1 <- plot1 + ggplot2::labs(y = "Comp 1", x = "Comp 2")
-              #ggplot2::ggtitle("MDS components 1 and 2")
 
               ## Plots components 1 and 3
-              x@significant_results$y <- x@significant_results$pc1
-              x@significant_results$x <- x@significant_results$pc3
+              if (all) {
+                  x@significant_results$y <- x@significant_results$pc1
+                  x@significant_results$x <- x@significant_results$pc3
+              } else {
+                  x@significant_results$y <- x@significant_results$pc1_repr
+                  x@significant_results$x <- x@significant_results$pc3_repr
+              }
               plot2 = .plot_scatter(x@significant_results, all,
                                     pvalue_threshold = x@significance_threshold)
               plot2 <- plot2 + ggplot2::labs(y = "Comp 1", x = "Comp 3")
-              #ggplot2::ggtitle("MDS components 1 and 3")
 
               ## Plots components 2 and 3
-              x@significant_results$x <- x@significant_results$pc2
-              x@significant_results$y <- x@significant_results$pc3
+              if (all) {
+                  x@significant_results$x <- x@significant_results$pc2
+                  x@significant_results$y <- x@significant_results$pc3
+              } else {
+                  x@significant_results$x <- x@significant_results$pc2_repr
+                  x@significant_results$y <- x@significant_results$pc3_repr
+              }
               plot3 = .plot_scatter(x@significant_results, all,
                                     pvalue_threshold = x@significance_threshold)
               plot3 <- plot3 + ggplot2::labs(x = "Comp 2", y = "Comp 3")
-              #ggplot2::ggtitle("MDS components 2 and 3")
 
               #.multiplot(plot1, plot3, plot2, plot4, cols = 2)
               .multiplot_shared_legend(plot1, plot2, plot3, nrow = 2, ncol = 2, position = "right")
@@ -523,19 +553,23 @@ setMethod("plot_explained_variance",
           c("x" = "TermsClustering"),
           function(x) {
 
+              data <- rbind(
+                  cbind(set = "all",  x@explained_variance),
+                  cbind(set = "representatives",  x@explained_variance_repr))
+
               ## Plots explained variance
               plot <- ggplot2::ggplot(
-                  data = x@explained_variance[x@explained_variance$explained_variance > 0.01 &
-                                                  x@explained_variance$component < 10, ],
-                  ggplot2::aes(x = component, y = explained_variance)) +
+                  data = data[data$component <= 10, ],
+                  ggplot2::aes(x = component,
+                               y = explained_variance,
+                               colour = set)) +
                   ggplot2::geom_point(
                       shape = I(16),
                       size = 3) +
-                  ggplot2::geom_line(colour="blue",
-                                     size = 0.2,
+                  ggplot2::geom_line(size = 0.2,
                                      linetype = 2) +
                   ggplot2::scale_x_continuous(
-                      breaks=x@explained_variance$component) +
+                      breaks=data$component) +
                   ggplot2::scale_y_continuous(label = scales::percent) +
                   ggplot2::labs(y = "Explained variance", x = "Component") +
                   ggplot2::theme_bw()

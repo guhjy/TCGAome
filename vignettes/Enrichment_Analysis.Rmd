@@ -140,7 +140,7 @@ TCGAome::plot_silhouette_analysis(kegg_term_clustering)
 
 We perform a PAM clustering with the obtained optimal number of clusters and select a term representative for each of the clusters. The criteria to select the term representative is as follows: for each cluster if there is any term with a frequency of annotation below a given threshold select the term with the lowest enrichment p-value; otherwise select the term with the lowest p-value across all terms independently of their frequency of annotation.
 
-Also based on the similarity metrics between terms we can perform a Multidimensional Scaling to plot our clusters in a reduced number of dimensions. To evaluate how well the first components in our MDS explains the observed variance:
+Also based on the similarity metrics between terms we can perform a Multidimensional Scaling to plot our clusters in a reduced number of dimensions. We have two alternatives: perform the MDS on every significant term that was clustered or perform it just on the subset of cluster representatives. To evaluate the MDS we need to inspect the explained variance by the first 3 components, which are the ones we will be visualizing.
 
 ```{r, warning=FALSE, message=FALSE}
 TCGAome::plot_explained_variance(kegg_term_clustering)
@@ -152,13 +152,13 @@ Finally plot the results of the clustering and MDS.
 TCGAome::plot_mds(kegg_term_clustering, all = TRUE)
 ```
 
-As this scatter plot might quickly get very noisy you may plot only the representative terms for each cluster.
+As this scatter plot might quickly get very noisy you may plot only the representative terms for each cluster in the MDS performed over the subset of cluster representatives.
 
 ```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 TCGAome::plot_mds(kegg_term_clustering, all = FALSE)
 ```
 
-And do the same for other annotation resources.
+We can do the same for other annotation resources.
 ```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 goa <- TCGAome::load_goa()
 goa_enrichment <- TCGAome::get_enrichment(goa, gene_list = gene_list)
@@ -181,37 +181,100 @@ TCGAome::plot_mds(omim_term_clustering, all = TRUE)
 ```
 
 
-### Evaluating the different similarity metrics
+## Evaluating the different similarity metrics
 
-The similarity metric employed affects how terms are distributed and separated between them. It is important to assess how well a given similarity metric explains the variance in our annotation terms in the first components of the MDS that will be used to plot our results.
+The similarity metric employed for clustering and MDS affects how terms are grouped. It is important to assess how well a given similarity metric explains the variance in our annotation terms in the first components of the MDS that will be used to plot our results. This analysis is specific for every annotation and enrichment results, no magic recipe that can be reused.
 
-```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+First thing is to evaluate the explained variance in our MDS space by using each of the similarity metrics.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 goa_term_clustering_ui <- TCGAome::TermsClustering(goa, goa_enrichment, distance_measure = "UI", significance_thr = 0.05, adj_method = "none", max_clusters = 10)
 goa_term_clustering_bray <- TCGAome::TermsClustering(goa, goa_enrichment, distance_measure = "bray-curtis", significance_thr = 0.05, adj_method = "none", max_clusters = 10)
 goa_term_clustering_binary <- TCGAome::TermsClustering(goa, goa_enrichment, distance_measure = "binary", significance_thr = 0.05, adj_method = "none", max_clusters = 10)
-plot_explained_variance_cosine <- TCGAome::plot_explained_variance(goa_term_clustering)
-plot_explained_variance_ui <- TCGAome::plot_explained_variance(goa_term_clustering_ui)
-plot_explained_variance_bray <- TCGAome::plot_explained_variance(goa_term_clustering_bray)
-plot_explained_variance_binary <- TCGAome::plot_explained_variance(goa_term_clustering_binary)
-cowplot::plot_grid(
-    plot_explained_variance_cosine, 
-    plot_explained_variance_ui,
-    plot_explained_variance_bray,
-    plot_explained_variance_binary,
-    labels = c('cosine', 'UI', 'Bray-Curtis', 'binary'))
+
+explained_variance_cosine <- goa_term_clustering@explained_variance
+explained_variance_ui <- goa_term_clustering_ui@explained_variance
+explained_variance_bray <- goa_term_clustering_bray@explained_variance
+explained_variance_binary <- goa_term_clustering_binary@explained_variance
+explained_variance_repr_cosine <- goa_term_clustering@explained_variance_repr
+explained_variance_repr_ui <- goa_term_clustering_ui@explained_variance_repr
+explained_variance_repr_bray <- goa_term_clustering_bray@explained_variance_repr
+explained_variance_repr_binary <- goa_term_clustering_binary@explained_variance_repr
+
+explained_variance <- rbind(
+    cbind(set = "all",
+          metric = "cosine", 
+          explained_variance_cosine[explained_variance_cosine$component <= 10, ]),
+    cbind(set = "all",
+          metric = "UI", 
+          explained_variance_ui[explained_variance_ui$component <= 10, ]),
+    cbind(set = "all",
+          metric = "Bray-Curtis", 
+          explained_variance_bray[explained_variance_bray$component <= 10, ]),
+    cbind(set = "all",
+          metric = "binary", 
+          explained_variance_binary[explained_variance_binary$component <= 10, ]),
+    cbind(set = "representatives",
+          metric = "cosine", 
+          explained_variance_repr_cosine[explained_variance_repr_cosine$component <= 10, ]),
+    cbind(set = "representatives",
+          metric = "UI", 
+          explained_variance_repr_ui[explained_variance_repr_ui$component <= 10, ]),
+    cbind(set = "representatives",
+          metric = "Bray-Curtis", 
+          explained_variance_repr_bray[explained_variance_repr_bray$component <= 10, ]),
+    cbind(set = "representatives",
+          metric = "binary", 
+          explained_variance_repr_binary[explained_variance_repr_binary$component <= 10, ])
+)
+
+ggplot2::ggplot(
+    data = explained_variance,
+    ggplot2::aes(x = component, y = explained_variance, colour = metric)) +
+    ggplot2::geom_point(
+        shape = I(16),
+        size = 3) +
+    ggplot2::geom_line(size = 0.2,
+                       linetype = set) +
+    ggplot2::scale_x_continuous(
+        breaks=unique(explained_variance$component)) +
+    ggplot2::scale_y_continuous(label = scales::percent) +
+    ggplot2::labs(y = "Explained variance", x = "Component") +
+    ggplot2::theme_bw()
+
 ```
 
 It is also important to assess how the similarity metric affects the optimal number of clusters.
 
-```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
-plot_silhouette_analysis_cosine <- TCGAome::plot_silhouette_analysis(goa_term_clustering)
-plot_silhouette_analysis_ui <- TCGAome::plot_silhouette_analysis(goa_term_clustering_ui)
-plot_silhouette_analysis_bray <- TCGAome::plot_silhouette_analysis(goa_term_clustering_bray)
-plot_silhouette_analysis_binary <- TCGAome::plot_silhouette_analysis(goa_term_clustering_binary)
-cowplot::plot_grid(
-    plot_silhouette_analysis_cosine, 
-    plot_silhouette_analysis_ui,
-    plot_silhouette_analysis_bray,
-    plot_silhouette_analysis_binary,
-    labels = c('cosine', 'UI', 'Bray-Curtis', 'binary'))
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+silhouette_cosine <- goa_term_clustering@silhouette
+silhouette_ui <- goa_term_clustering_ui@silhouette
+silhouette_bray <- goa_term_clustering_bray@silhouette
+silhouette_binary <- goa_term_clustering_binary@silhouette
+
+silhouette <- rbind(
+    cbind(metric = "cosine", 
+          silhouette_cosine),
+    cbind(metric = "UI", 
+          silhouette_ui),
+    cbind(metric = "Bray-Curtis", 
+          silhouette_bray),
+    cbind(metric = "binary", 
+          silhouette_binary)
+)
+
+ggplot2::ggplot(
+    data = silhouette,
+    ggplot2::aes(x = k, y = avg_width, colour = metric)) +
+    ggplot2::geom_line(
+        size = 0.2,
+        linetype = 2) +
+    ggplot2::geom_point(
+      shape = I(16),
+      size = 3) +
+    ggplot2::scale_x_continuous(
+      breaks=unique(silhouette$k)) +
+    ggplot2::scale_y_continuous() +
+    ggplot2::labs(y = "Average silhouette width", x = "Number of clusters") +
+    ggplot2::theme_bw()
 ```

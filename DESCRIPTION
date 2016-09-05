@@ -45,17 +45,17 @@ Suggests:
     knitr,
     rmarkdown
 Collate:
-    'biomart.R'
+    'biomart.r'
     'config.R'
     'functional_analysis.R'
     'gene_annotations.R'
     'gene_list_enrichment.R'
-    'go_inspector.R'
-    'goa_enrichment.R'
+    'go_inspector.r'
+    'goa_enrichment.r'
     'multivariate_analysis.R'
-    'pipeline.R'
-    'plots.R'
-    'preprocessing.R'
-    'tcga_download.R'
+    'pipeline.r'
+    'plots.r'
+    'preprocessing.r'
+    'tcga_download.r'
     'terms_clustering.R'
 VignetteBuilder: knitr
