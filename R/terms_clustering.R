@@ -569,11 +569,14 @@ setMethod("plot_explained_variance",
                   ggplot2::geom_line(size = 0.2,
                                      linetype = 2) +
                   ggplot2::scale_x_continuous(
+                      name = "Component",
                       breaks=data$component) +
-                  ggplot2::scale_y_continuous(label = scales::percent) +
-                  ggplot2::labs(y = "Explained variance", x = "Component") +
+                  ggplot2::scale_y_continuous(
+                      name = "Explained variance",
+                      label = scales::percent) +
+                  ggplot2::scale_color_discrete(
+                      name = NULL)
                   ggplot2::theme_bw()
-              #ggplot2::ggtitle("Explained variance")
 
               plot
           })
@@ -616,11 +619,12 @@ setMethod("plot_silhouette_analysis",
                       shape = I(16),
                       size = 3) +
                   ggplot2::scale_x_continuous(
-                      breaks=x@silhouette$k) +
-                  ggplot2::scale_y_continuous() +
-                  ggplot2::labs(y = "Average silhouette width", x = "Number of clusters") +
+                      name = "Number of clusters",
+                      breaks = x@silhouette$k) +
+                  ggplot2::scale_y_continuous(
+                      name = "Average silhouette width"
+                  ) +
                   ggplot2::theme_bw()
-              #ggplot2::ggtitle("Explained variance")
 
               plot
           })
