@@ -9,20 +9,26 @@ get_hpo_folder <- function() {
 }
 
 
-#' Reads Gene Ontology Annotations (GOA) for Human genes and for all Uniprot. No electronically inferred annotations (IEA)
-#' @param search_universe Two possible values "human" or "uniprot". The first provides associations to GO of human genes,
-#' while the second considers all genes registered in Uniprot. [default: "human"]
-#' @param ontology The ontology within Gene Ontology: "BP", "CC" or "MF". [default: "BP"]
-#' @param goa_human_annotations_url The URL to human GOA. [default: "http://geneontology.org/gene-associations/gene_association.goa_human.gz"]
-#' @param goa_uniprot_annotations_url The URL to Uniprot GOA. [default: "http://geneontology.org/gene-associations/gene_association.goa_uniprot_noiea.gz"]
+#' Reads Gene Ontology Annotations (GOA) for Human genes and for all Uniprot.
+#' No electronically inferred annotations (IEA)
+#' @param search_universe Two possible values "human" or "uniprot".
+#' The first provides associations to GO of human genes,
+#' while the second considers all genes registered in Uniprot.
+#' [default: "human"]
+#' @param ontology The ontology within Gene Ontology: "BP", "CC" or "MF".
+#' [default: "BP"]
+#' @param goa_uniprot_annotations_url The URL to Uniprot GOA.
+#' [default: "http://geneontology.org/gene-associations/gene_association.goa_uniprot_noiea.gz"]
 #'
 #' @keywords TCGAome
 #' @export
 #' @examples
 #' goa = load_goa()
-load_goa <- function(search_universe = "human",
-                     ontology = "BP",
-                     goa_uniprot_annotations_url = "http://geneontology.org/gene-associations/gene_association.goa_uniprot_noiea.gz") {
+load_goa <- function(
+    search_universe = "human",
+    ontology = "BP",
+    goa_uniprot_annotations_url =
+        "http://geneontology.org/gene-associations/gene_association.goa_uniprot_noiea.gz") {
 
     if (! search_universe %in% c("human", "uniprot")) {
         stop("Invalid value for search_universe. Expected one of ['human', 'uniprot']")
@@ -36,73 +42,72 @@ load_goa <- function(search_universe = "human",
     goa = NULL
 
     if (search_universe == "human") {
-        ## Loads stored attribute if any
-        goa <- attr(load_goa, "human_goa")
-        stored_ontology <- attr(load_goa, "ontology")
-        if (is.null(goa) || is.null(stored_ontology) || ontology != stored_ontology) {
-            ## Downloads and stores as attribute human GOA
-            futile.logger::flog.debug("Loading human GOA for the first time")
-            uniKeys <- AnnotationDbi::keys(org.Hs.eg.db::org.Hs.eg.db, keytype="SYMBOL")
-            cols <- c("GOALL")
-            goa_raw <- AnnotationDbi::select(org.Hs.eg.db::org.Hs.eg.db, keys=uniKeys, columns=cols, keytype="SYMBOL")
-            goa_raw <- goa_raw[goa_raw$ONTOLOGYALL == ontology, ]
-            goa_raw <- goa_raw[, c(1, 2)]
-            colnames(goa_raw) <- c("Gene", "Term")
-            goa <- new("GeneAnnotations", raw_annotations = goa_raw, name=paste("GOA-Human", ontology, sep=" "))
-            attr(load_goa, "human_goa") <<- goa
-            attr(load_goa, "ontology") <<- ontology
-        } else {
-            futile.logger::flog.debug("Loading cached human GOA")
-        }
+        ## Downloads and stores as attribute human GOA
+        futile.logger::flog.info("Loading human GOA...")
+        uniKeys <- AnnotationDbi::keys(
+            org.Hs.eg.db::org.Hs.eg.db,
+            keytype="SYMBOL")
+        cols <- c("GOALL")
+        goa_raw <- AnnotationDbi::select(
+            org.Hs.eg.db::org.Hs.eg.db,
+            keys=uniKeys,
+            columns=cols,
+            keytype="SYMBOL")
+        goa_raw <- goa_raw[goa_raw$ONTOLOGYALL == ontology, ]
+        goa_raw <- goa_raw[, c(1, 2)]
+        colnames(goa_raw) <- c("Gene", "Term")
+        name <- paste("GOA-Human", ontology, sep=" ")
     } else if (search_universe == "uniprot") {
-        ## Loads stored attribute if any
-        goa <- attr(load_goa, "uniprot_goa")
-        if (is.null(goa)) {
-            ## Downloads and stores as attribute uniprot GOA
-            futile.logger::flog.debug("Loading uniprot GOA for the first time")
-            file <- basename(goa_uniprot_annotations_url)
-            file <- paste(goa_annotations_folder, file, sep = "")
-            download.file(goa_uniprot_annotations_url, file, quiet = TRUE)
-            goa_raw <- read.table(file, header = F, comment.char = "!", sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
-            goa_raw <- goa_raw[, c(3, 5)]
-            colnames(goa_raw) <- c("Gene", "Term")
-            ## Preprocess the GOA table, maps gene ids to entrez gene ids
-            goa <- new("GeneAnnotations", raw_annotations = goa_raw, name="GOA-Uniprot")
-            attr(load_goa, "uniprot_goa") <<- goa
-        } else {
-            futile.logger::flog.debug("Loading cached uniprot GOA")
-        }
+        ## Downloads and stores as attribute uniprot GOA
+        futile.logger::flog.info("Loading uniprot GOA...")
+        file <- basename(goa_uniprot_annotations_url)
+        file <- paste(goa_annotations_folder, file, sep = "")
+        download.file(goa_uniprot_annotations_url, file, quiet = TRUE)
+        goa_raw <- read.table(
+            file, header = F, comment.char = "!",
+            sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
+        goa_raw <- goa_raw[, c(3, 5)]
+        colnames(goa_raw) <- c("Gene", "Term")
+        name <- "GOA-Uniprot"
     }
-
+    goa <- new("GeneAnnotations",
+               raw_annotations = goa_raw,
+               name = name)
+    futile.logger::flog.info(
+        "Loaded %d GO terms and %d genes",
+        nrow(goa@term2gene),
+        nrow(goa@gene2term))
     return(goa)
 }
 
-#' Reads KEGG pathways for Human genes and for all Uniprot. No electronically inferred annotations (IEA)
+#' Reads KEGG pathways for Human genes and for all Uniprot.
+#' No electronically inferred annotations (IEA)
 #'
 #' @keywords TCGAome
 #' @export
 #' @examples
 #' kegg = load_kegg()
 load_kegg <- function() {
-
-    kegg = NULL
-
-    ## Loads stored attribute if any
-    kegg <- attr(load_kegg, "human_kegg")
-    if (is.null(kegg)) {
-        ## Downloads and stores as attribute KEGG
-        futile.logger::flog.debug("Loading human KEGG for the first time")
-        uniKeys <- AnnotationDbi::keys(org.Hs.eg.db::org.Hs.eg.db, keytype="SYMBOL")
-        cols <- c("PATH")
-        kegg_raw <- AnnotationDbi::select(org.Hs.eg.db::org.Hs.eg.db, keys=uniKeys, columns=cols, keytype="SYMBOL")
-        kegg_raw <- kegg_raw[, c(1, 2)]
-        colnames(kegg_raw) <- c("Gene", "Term")
-        kegg <- new("GeneAnnotations", raw_annotations = kegg_raw, name="KEGG-Human")
-        attr(load_kegg, "human_kegg") <<- kegg
-    } else {
-        futile.logger::flog.debug("Loading cached human KEGG")
-    }
-
+    ## Downloads and stores as attribute KEGG
+    futile.logger::flog.info("Loading human KEGG...")
+    uniKeys <- AnnotationDbi::keys(
+        org.Hs.eg.db::org.Hs.eg.db,
+        keytype="SYMBOL")
+    cols <- c("PATH")
+    kegg_raw <- AnnotationDbi::select(
+        org.Hs.eg.db::org.Hs.eg.db,
+        keys=uniKeys,
+        columns=cols,
+        keytype="SYMBOL")
+    kegg_raw <- kegg_raw[, c(1, 2)]
+    colnames(kegg_raw) <- c("Gene", "Term")
+    kegg <- new("GeneAnnotations",
+                raw_annotations = kegg_raw,
+                name="KEGG-Human")
+    futile.logger::flog.info(
+        "Loaded %d KEGG pathways and %d genes",
+        nrow(kegg@term2gene),
+        nrow(kegg@gene2term))
     return(kegg)
 }
 
@@ -113,30 +118,32 @@ load_kegg <- function() {
 #' @examples
 #' omim = load_omim()
 load_omim <- function() {
-
-    omim = NULL
-
-    ## Loads stored attribute if any
-    omim <- attr(load_omim, "omim")
-    if (is.null(omim)) {
-        ## Downloads and stores as attribute human OMIM
-        futile.logger::flog.debug("Loading human OMIM for the first time")
-        uniKeys <- AnnotationDbi::keys(org.Hs.eg.db::org.Hs.eg.db, keytype="SYMBOL")
-        cols <- c("OMIM")
-        omim_raw <- AnnotationDbi::select(org.Hs.eg.db::org.Hs.eg.db, keys=uniKeys, columns=cols, keytype="SYMBOL")
-        omim_raw <- omim_raw[, c(1, 2)]
-        colnames(omim_raw) <- c("Gene", "Term")
-        omim <- new("GeneAnnotations", raw_annotations = omim_raw, name="OMIM")
-        attr(load_omim, "omim") <<- omim
-    } else {
-        futile.logger::flog.debug("Loading cached human OMIM")
-    }
-
+    ## Downloads and stores as attribute human OMIM
+    futile.logger::flog.info("Loading human OMIM...")
+    uniKeys <- AnnotationDbi::keys(
+        org.Hs.eg.db::org.Hs.eg.db,
+        keytype="SYMBOL")
+    cols <- c("OMIM")
+    omim_raw <- AnnotationDbi::select(
+        org.Hs.eg.db::org.Hs.eg.db,
+        keys=uniKeys,
+        columns=cols,
+        keytype="SYMBOL")
+    omim_raw <- omim_raw[, c(1, 2)]
+    colnames(omim_raw) <- c("Gene", "Term")
+    omim <- new("GeneAnnotations",
+                raw_annotations = omim_raw,
+                name="OMIM")
+    futile.logger::flog.info(
+        "Loaded %d OMIM diseases and %d genes",
+        nrow(omim@term2gene),
+        nrow(omim@gene2term))
     return(omim)
 }
 
 #' Reads Human Phenotype Ontology (HPO) annotations.
-#' @param hpo_annotations_url The URL to HPO annotations to genes. [default: "http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastStableBuild/artifact/annotation/ALL_SOURCES_TYPICAL_FEATURES_phenotype_to_genes.txt"]
+#' @param hpo_annotations_url The URL to HPO annotations to genes.
+#' [default: "http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastStableBuild/artifact/annotation/ALL_SOURCES_TYPICAL_FEATURES_phenotype_to_genes.txt"]
 #'
 #' @keywords TCGAome
 #' @export
@@ -149,24 +156,24 @@ load_hpo <- function(
     ## get and create working folder
     hpo_annotations_folder <- TCGAome::get_hpo_folder()
 
-    ## Loads stored attribute if any
-    hpo <- attr(load_hpo, "hpo")
-    if (is.null(hpo)) {
-        ## Downloads and stores as attribute HPO
-        futile.logger::flog.debug("Loading HPO for the first time")
-        file <- basename(hpo_annotations_url)
-        file <- paste(hpo_annotations_folder, file, sep = "")
-        download.file(hpo_annotations_url, file, quiet = TRUE)
-        hpo_raw <- read.table(file, header = F, comment.char = "#", sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
-        hpo_raw <- hpo_raw[, c(4, 1)]
-        colnames(hpo_raw) <- c("Gene", "Term")
-        ## Preprocess the HPO table, maps gene ids to entrez gene ids
-        hpo <- new("GeneAnnotations", raw_annotations = hpo_raw, name="HPO")
-        attr(load_hpo, "hpo") <<- hpo
-    } else {
-        futile.logger::flog.debug("Loading cached HPO")
-    }
-
+    ## Downloads and stores as attribute HPO
+    futile.logger::flog.info("Loading HPO...")
+    file <- basename(hpo_annotations_url)
+    file <- paste(hpo_annotations_folder, file, sep = "")
+    download.file(hpo_annotations_url, file, quiet = TRUE)
+    hpo_raw <- read.table(
+        file, header = F, comment.char = "#",
+        sep = "\t", stringsAsFactors = FALSE, fill = TRUE)
+    hpo_raw <- hpo_raw[, c(4, 1)]
+    colnames(hpo_raw) <- c("Gene", "Term")
+    ## Preprocess the HPO table, maps gene ids to entrez gene ids
+    hpo <- new("GeneAnnotations",
+               raw_annotations = hpo_raw,
+               name="HPO")
+    futile.logger::flog.info(
+        "Loaded %d HPO phenotypes and %d genes",
+        nrow(hpo@term2gene),
+        nrow(hpo@gene2term))
     return(hpo)
 }
 
@@ -691,43 +698,76 @@ setMethod("plot",
           c("x" = "GeneAnnotations"),
           function(x) {
 
-              gene_dist = data.frame(
-                  Gene = x@gene2term$Gene,
-                  Associations = unlist(lapply(x@gene2term$Term, FUN = length)),
-                  Class = "Gene"
-              )
+              #gene_dist = data.frame(
+              #    Gene = x@gene2term$Gene,
+              #    Associations = unlist(lapply(x@gene2term$Term, FUN = length)),
+              #    Class = "Gene"
+              #)
 
-              term_dist = data.frame(
-                  Term = x@term2gene$Term,
-                  Associations = unlist(lapply(x@term2gene$Gene, FUN = length)),
-                  Class = "Term"
-              )
+              #term_dist = data.frame(
+              #    Term = x@term2gene$Term,
+              #    Associations = unlist(lapply(x@term2gene$Gene, FUN = length)),
+              #    Class = "Term"
+              #)
+
+              gene_dist <- as.data.frame(
+                  table(
+                      unlist(lapply(x@gene2term$Term, FUN = length))),
+                  stringsAsFactors = F)
+              gene_dist$class <- "gene"
+              names(gene_dist) <- c("nterms", "ngenes", "class")
+
+              term_dist <- as.data.frame(
+                  table(
+                      unlist(lapply(x@term2gene$Gene, FUN = length))),
+                  stringsAsFactors = F)
+              term_dist$class <- "term"
+              names(term_dist) <- c("ngenes", "nterms", "class")
+
+              annotation_dist <- rbind(gene_dist, term_dist)
+              annotation_dist$ngenes <- as.numeric(annotation_dist$ngenes)
+              annotation_dist$nterms <- as.numeric(annotation_dist$nterms)
 
               ## Plots gene associations
-              plot1 <- ggplot2::ggplot(
-                  data = gene_dist,
-                  ggplot2::aes(x = Associations)) +
-                  ggplot2::geom_histogram(ggplot2::aes(y=..density..),      # Histogram with density instead of count on y-axis
-                                          binwidth=5,
-                                          colour="black", fill="white") +
-                  ggplot2::geom_density(alpha=.2, fill="#FF6666") +  # Overlay with transparent density plot
-                  ggplot2::geom_vline(ggplot2::aes(xintercept=mean(Associations, na.rm=T)),   # Ignore NA values for mean
-                             color="red", linetype="dashed", size=1) +
-                  ggplot2::scale_x_continuous("No. of terms associated per gene") +
-                  ggplot2::theme_bw()
+              plot <- ggplot2::ggplot(data = annotation_dist,
+                                      ggplot2::aes(x = nterms, y = ngenes)) +
+                  ggplot2::geom_point(ggplot2::aes(shape = class, color = class)) +
+                  ggplot2::scale_y_log10("# genes associated") +
+                  ggplot2::scale_x_log10("# terms associated")
+
 
               ## Plots gene associations
-              plot2 <- ggplot2::ggplot(
-                  data = term_dist,
-                  ggplot2::aes(x = Associations)) +
-                  ggplot2::geom_histogram(ggplot2::aes(y=..density..),      # Histogram with density instead of count on y-axis
-                                          binwidth=5,
-                                          colour="black", fill="white") +
-                  ggplot2::geom_density(alpha=.2, fill="#FF6666") +  # Overlay with transparent density plot
-                  ggplot2::geom_vline(ggplot2::aes(xintercept=mean(Associations, na.rm=T)),   # Ignore NA values for mean
-                                      color="red", linetype="dashed", size=1) +
-                  ggplot2::scale_x_continuous("No. of genes associated per term") +
-                  ggplot2::theme_bw()
+              #plot1 <- ggplot2::ggplot(
+              #    data = gene_dist,
+              #    ggplot2::aes(x = Associations)) +
+              #    ggplot2::geom_histogram( #ggplot2::aes(y=..density..),      # Histogram with density instead of count on y-axis
+              #                            bins=30,
+              #                            colour="black", fill="white") +
+              #    #ggplot2::geom_density(alpha=.2, fill="#FF6666") +  # Overlay with transparent density plot
+              #    ggplot2::geom_vline(ggplot2::aes(xintercept=mean(Associations, na.rm=T)),   # Ignore NA values for mean
+              #               color="red", linetype="dashed", size=1) +
+              #    ggplot2::scale_y_continuous("# genes") +
+              #    ggplot2::scale_x_continuous("# terms associated") +
+              #    ggplot2::theme_bw() +
+              #    ggplot2::ggtitle(paste(x@name, "genes", sep = " - "))
 
-              cowplot::plot_grid(plot1, plot2)
+
+              ## Plots gene associations
+              #plot2 <- ggplot2::ggplot(
+              #    data = term_dist,
+              #    ggplot2::aes(x = Associations)) +
+              #    ggplot2::geom_histogram( #ggplot2::aes(y=..density..),      # Histogram with density instead of count on y-axis
+              #                            bins=30,
+              #                            colour="black", fill="white") +
+              #    #ggplot2::geom_density(alpha=.2, fill="#FF6666") +  # Overlay with transparent density plot
+              #    ggplot2::geom_vline(ggplot2::aes(xintercept=mean(Associations, na.rm=T)),   # Ignore NA values for mean
+              #                        color="red", linetype="dashed", size=1, ) +
+              #    ggplot2::scale_y_continuous("# terms") +
+              #    ggplot2::scale_x_continuous("# genes associated") +
+              #    ggplot2::theme_bw() +
+              #    ggplot2::ggtitle(paste(x@name, "terms", sep = " - "))
+
+              #cowplot::plot_grid(plot1, plot2)
+              #
+              plot
           })
