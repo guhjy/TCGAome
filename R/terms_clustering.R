@@ -219,23 +219,33 @@ setMethod("initialize",
                    significance_threshold, adj_method, max_clusters){
 
               ## Initialize input data
+              futile.logger::flog.info("Initializing TermsClustering...")
               .Object@distance_measure <- distance_measure
               .Object@significance_threshold <- significance_threshold
               .Object@adj_method <- adj_method
+              futile.logger::flog.info("Distance metric : %s", .Object@distance_measure)
+              futile.logger::flog.info("Significance threshold : %s", .Object@significance_threshold)
 
               ## Gets only significant enrichment results
+              futile.logger::flog.info("Getting significantly enriched terms...")
               .Object@significant_results <- TCGAome::get_significant_results(
                   gene_list_enrichment, significance_threshold, adj_method)
+              futile.logger::flog.info("# of significant terms : %s", nrow(.Object@significant_results))
 
               ## Computes distance matrix
+              futile.logger::flog.info("Getting distance matrix for the signifcant terms...")
               .Object@distance_matrix <- TCGAome::get_term_distance_matrix(
                   gene_annotations, distance_measure,
                   terms_subset = .Object@significant_results$Term)
+              futile.logger::flog.info("Got it!")
 
               ## Checks object validity
+              futile.logger::flog.info("Checking object's validity...")
               validObject(.Object)
+              futile.logger::flog.info("Object is valid!")
 
               ## Computes clustering
+              futile.logger::flog.info("Clustering significant terms with max clusters = %d ...", max_clusters)
               clusters <- TCGAome::.pam_clustering(
                   .Object@distance_matrix,
                   max_clusters = max_clusters)
@@ -244,8 +254,10 @@ setMethod("initialize",
                   clusters$clustering,
                   by = "Term")
               .Object@silhouette <- clusters$silhouette
+              futile.logger::flog.info("Found %d clusters", length(unique(clusters$clustering$Cluster)))
 
               ## Computes MDS
+              futile.logger::flog.info("Computing MDS on the significant terms...")
               mds <- TCGAome::.multidimensional_scaling(
                   .Object@distance_matrix)
               .Object@significant_results <- merge(
@@ -253,8 +265,10 @@ setMethod("initialize",
                   mds$mds,
                   by = "Term")
               .Object@explained_variance <- mds$explained_variance
+              futile.logger::flog.info("MDS done")
 
               ## Retrieves the frequency of annotation
+              futile.logger::flog.info("Computing the annotation frequency of significant terms...")
               .Object@significant_results$Freq <- vapply(
                   .Object@significant_results$Term,
                   FUN = function(term) {
@@ -263,16 +277,20 @@ setMethod("initialize",
                   },
                   FUN.VALUE = numeric(1)
               )
+              futile.logger::flog.info("Done")
 
               ## Select the representative term for every cluster
+              futile.logger::flog.info("Select representative terms for clusters...")
               representatives <- TCGAome::.select_representatives(
                   .Object@significant_results)
               .Object@significant_results <- merge(
                   .Object@significant_results,
                   representatives,
                   by = "Cluster")
+              futile.logger::flog.info("Done")
 
               # Compute MDS again just on representatives
+              futile.logger::flog.info("Compute MDS again on cluster representatives...")
               distance_matrix_repr <- as.dist(as.matrix(
                   .Object@distance_matrix)[
                       unlist(representatives$repr_term),
@@ -281,6 +299,7 @@ setMethod("initialize",
                   distance_matrix_repr)
               names(mds_repr$mds) = c("Term", "pc1_repr",
                                       "pc2_repr", "pc3_repr")
+              futile.logger::flog.info("Done")
 
               .Object@significant_results <- merge(
                   .Object@significant_results,

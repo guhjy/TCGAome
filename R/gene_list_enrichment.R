@@ -53,6 +53,7 @@ GeneListEnrichment <- function(...) new("GeneListEnrichment",...)
     all_genes <- gene_annotations@gene2term$Gene
     all_terms <- gene_annotations@term2gene$Term
     pvalues <- as.double(sapply(all_terms, function(term) {
+        ## FIXME: there is a problem with the usage of fastmatch
         associated_genes = as.character(unlist(
             gene_annotations@term2gene[fastmatch::fmatch(term, gene_annotations@term2gene$Term), ]$Gene))
         fisher.test(matrix(c(
