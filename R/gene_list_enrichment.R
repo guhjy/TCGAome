@@ -54,9 +54,9 @@ GeneListEnrichment <- function(...) new("GeneListEnrichment",...)
     all_terms <- gene_annotations@term2gene$Term
     pvalues <- as.double(sapply(all_terms, function(term) {
         associated_genes = as.character(unlist(
-            gene_annotations@term2gene[gene_annotations@term2gene$Term == term, ]$Gene))
+            gene_annotations@term2gene[fastmatch::fmatch(term, gene_annotations@term2gene$Term), ]$Gene))
         fisher.test(matrix(c(
-            length(intersect(gene_list, associated_genes)),
+            length(fastmatch::fmatch(gene_list, associated_genes)),
             length(associated_genes[! associated_genes %in% gene_list]),
             length(gene_list[! gene_list %in% associated_genes]),
             length(all_genes[! all_genes %in% union(associated_genes, gene_list)])

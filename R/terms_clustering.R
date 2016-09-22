@@ -114,6 +114,7 @@ TermsClustering <- function(...) new("TermsClustering",...)
 
 ## PAM and silhouette clustering
 .pam_clustering <- function(distance, max_clusters = 10) {
+    require(cluster)
     ## if the max_clusters is set to null or 0 then it
     ## takes the number of elements minus 1
     if (is.null(max_clusters) | max_clusters == 0) {
@@ -121,13 +122,18 @@ TermsClustering <- function(...) new("TermsClustering",...)
     }
     max_clusters <- min(max_clusters,
                        attr(distance, "Size") - 1)
-    ## Finds the optimal number of clusters by silhouette analysis
-    sil_width <- sapply(2:max_clusters, FUN = function(x) cluster::pam(distance, x)$silinfo$avg.width)
+    ## Runs all clusters and its silhouette analysis
+    clusterings <- lapply(2:max_clusters, FUN = function(x) pam(distance, x))
+    sil_width <- vapply(2:max_clusters,
+                        FUN = function(x) {
+                            clusterings[[x - 1]]$silinfo$avg.width
+                        },
+                        FUN.VALUE = numeric(1))
     names(sil_width) <- 2:max_clusters
+    ## Selects the optimal clustering
     k_best <- as.numeric(names(which.max(sil_width)))
     message(paste("Optimal number of clusters: ", k_best))
-    ## Clusters with PAM
-    clustering <- cluster::pam(distance, k_best)
+    clustering <- clusterings[[k_best - 1]]
     return(list(
         clustering = data.frame(Term = names(clustering$clustering),
                                 Cluster = as.vector(clustering$clustering),
@@ -145,13 +151,19 @@ TermsClustering <- function(...) new("TermsClustering",...)
     number_elements <- attr(distance, "Size")
     if (number_elements < 2) {
         pc1 <- rep(0, number_elements)
+        names(pc1) <- attr(distance, "Labels")
         pc2 <- rep(0, number_elements)
+        names(pc2) <- attr(distance, "Labels")
         pc3 <- rep(0, number_elements)
+        names(pc3) <- attr(distance, "Labels")
         explained_variance = c(1, 0, 0)
     } else if (number_elements == 2) {
         pc1 <- c(-distance[1] / 2, distance[1] / 2)
+        names(pc1) <- attr(distance, "Labels")
         pc2 <- rep(0, number_elements)
+        names(pc2) <- attr(distance, "Labels")
         pc3 <- rep(0, number_elements)
+        names(pc3) <- attr(distance, "Labels")
         explained_variance = c(1, 0, 0)
     } else {
         fit <- cmdscale(distance, eig = TRUE, k = 3)
@@ -160,15 +172,15 @@ TermsClustering <- function(...) new("TermsClustering",...)
             pc2 <- fit$points[, 2]
         } else {
             pc2 <- rep(0, length(x))
-            names(y) <- names(x)
+            names(pc2) <- names(pc1)
         }
         if (dim(fit$points)[2] > 2) {
             pc3 <- fit$points[, 3]
         } else {
             pc3 <- rep(0, length(x))
-            names(z) <- names(x)
+            names(pc3) <- names(pc1)
         }
-        explained_variance = fit$eig / sum(fit$eig)
+        explained_variance = fit$eig / sum(abs(fit$eig))
     }
     return(list(
         mds = data.frame(Term = names(pc1), pc1 = pc1, pc2 = pc2, pc3 = pc3,
@@ -243,23 +255,24 @@ setMethod("initialize",
               .Object@explained_variance <- mds$explained_variance
 
               ## Retrieves the frequency of annotation
-              .Object@significant_results$Freq <- sapply(
+              .Object@significant_results$Freq <- vapply(
                   .Object@significant_results$Term,
                   FUN = function(term) {
                       TCGAome::get_term_freq(
                           gene_annotations, term)
-                  }
+                  },
+                  FUN.VALUE = numeric(1)
               )
 
               ## Select the representative term for every cluster
-              representatives <- .select_representatives(
+              representatives <- TCGAome::.select_representatives(
                   .Object@significant_results)
               .Object@significant_results <- merge(
                   .Object@significant_results,
                   representatives,
                   by = "Cluster")
 
-              #TODO: compute MDS again just on representatives
+              # Compute MDS again just on representatives
               distance_matrix_repr <- as.dist(as.matrix(
                   .Object@distance_matrix)[
                       unlist(representatives$repr_term),
@@ -473,23 +486,23 @@ setMethod("initialize",
 #'
 #' @param x The GeneTermClustering class on which the method will run.
 #' @param all A flag indicating if showing all members of each cluster or
-#' just the cluster representatives
+#' just the cluster representatives (default: FALSE)
 
 #' @return The ggplot2 plot
 #'
 #' @export
 #'
 #' @examples
-#' TCGAome::plot_mds(hpo_term_clustering, all = TRUE)
+#' TCGAome::plot_mds(hpo_term_clustering)
 setGeneric("plot_mds",
-           signature = c("x", "all"),
-           function(x, all) standardGeneric("plot_mds"))
+           signature = c("x"),
+           function(x, ..., all = FALSE) standardGeneric("plot_mds"))
 
 #' @aliases plot_mds
 #' @export
 setMethod("plot_mds",
-          c("x" = "TermsClustering", "all" = "logical"),
-          function(x, all=FALSE) {
+          c("x" = "TermsClustering"),
+          function(x, ..., all = FALSE) {
 
               ## Plots components 1 and 2
               if (all) {

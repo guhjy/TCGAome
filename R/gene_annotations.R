@@ -251,15 +251,20 @@ setMethod("initialize",
               raw_annotations$Term <- as.character(raw_annotations$Term)
               ## Removes entries with NA values
               .Object@raw_annotations <- raw_annotations[
-                  !is.na(raw_annotations$Term) & !is.na(raw_annotations$Gene), ]
-              ## Checks object validity
-              validObject(.Object)
+                  !is.na(raw_annotations[, "Term"]) & !is.na(raw_annotations[, "Gene"]), ]
               ## Sets slots
               .Object@name <- name
-              .Object@gene2term <- aggregate(data = .Object@raw_annotations, Term ~ Gene, c)
-              .Object@term2gene <- aggregate(data = .Object@raw_annotations, Gene ~ Term, c)
-              .Object@max_term_annotations <- max(sapply(.Object@term2gene$Gene, length))
+              .Object@gene2term <- aggregate(data = .Object@raw_annotations,
+                            Term ~ Gene, c)
+              rownames(.Object@gene2term) <- .Object@gene2term$Gene
+              .Object@term2gene <- aggregate(data = .Object@raw_annotations,
+                            Gene ~ Term, c)
+              rownames(.Object@term2gene) <- .Object@term2gene[, c("Term")]
+              .Object@max_term_annotations <- max(sapply(.Object@term2gene[, c("Gene")], length))
               .Object@func_similarity_methods <- c("UI", "cosine", "bray-curtis", "binary")
+
+              ## Checks object validity
+              validObject(.Object)
 
               return(.Object)
           })
@@ -292,10 +297,12 @@ setMethod("get_term_freq", c("x" = "GeneAnnotations", "term" = "character"),
           function(x, term) {
               ## FIXME: this maximum size might need to be normalized as it is way too high
               ## somehow avoid considering terms very high in the hierarchy
-              if (! term %in% x@term2gene$Term) {
-                  stop(paste("Term ", term, " not present in the annotations", sep = ""))
-              }
-              return(length(unlist(x@term2gene[x@term2gene$Term == term, ]$Gene)) / x@max_term_annotations)
+              #if (! term %in% x@term2gene$Term) {
+              #    stop(paste("Term ", term, " not present in the annotations", sep = ""))
+              #}
+              return(length(unlist(
+                  x@term2gene[term, ]$Gene))
+                  / x@max_term_annotations)
           })
 
 #' get_functional_similarity()
@@ -333,38 +340,201 @@ setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
                                          "term2" = "character",
                                          "distance_measure" = "character"),
           function(x, term1, term2, distance_measure) {
-              if (! term1 %in% x@term2gene$Term) {
-                  stop(paste("Term ", term1, " not present in the annotations", sep = ""))
-              }
-              if (! term2 %in% x@term2gene$Term) {
-                  stop(paste("Term ", term2, " not present in the annotations", sep = ""))
-              }
-              term1_genes <- x@term2gene[x@term2gene$Term == term1, c("Gene")][[1]]
-              term2_genes <- x@term2gene[x@term2gene$Term == term2, c("Gene")][[1]]
-              if (length(term1_genes) == 0 | length(term2_genes) == 0) {
-                  # When no genes associated to any term they are disimilar
-                  similarity <- 0.0
+              if (distance_measure == "binary") {
+                  similarity <- TCGAome::get_binary_similarity(x, term1, term2)
+              } else if (distance_measure == "UI") {
+                  similarity <- TCGAome::get_ui_similarity(x, term1, term2)
+              } else if (distance_measure == "bray-curtis") {
+                  similarity <- TCGAome::get_bc_similarity(x, term1, term2)
+              } else if (distance_measure == "cosine") {
+                  similarity <- TCGAome::get_cosine_similarity(x, term1, term2)
               } else {
-                  # calculates the intersection
-                  term_intersection <- intersect(term1_genes, term2_genes)
-                  # calculates the different similarity metrics
-                  if (distance_measure == "binary") {
-                      term_union <- union(term1_genes, term2_genes)
-                      term_xor <- term_union[!term_union %in% term_intersection]
-                      similarity <- length(term_xor) / length(x@gene2term$Gene)
-                  } else if (distance_measure == "UI") {
-                      term_union <- union(term1_genes, term2_genes)
-                      similarity <- length(term_intersection) / length(term_union)
-                  } else if (distance_measure == "bray-curtis") {
-                      similarity <- ( 2 * length(term_intersection) ) / ( length(term1_genes) + length(term2_genes) )
-                  } else if (distance_measure == "cosine") {
-                      similarity <- length(term_intersection) / ( sqrt(length(term1_genes) * length(term2_genes)) )
-                  } else {
-                      stop(paste("Non supported distance measure ", distance_measure, sep=""))
-                  }
+                  stop(paste("Non supported distance measure ", distance_measure, sep=""))
               }
               return(similarity)
           })
+
+
+#' get_binary_similarity()
+#'
+#' Function that gets the binary functional similarity between two terms. That is
+#' a measure of the shared terms in the annotations resources.
+#'
+#' @param x The GeneAnnotations class on which the method will run.
+#' @param term1 The first term on which to calculate the functional similarity.
+#' @param term2 The second term on which to calculate the functional similarity.
+
+#' @return The binary functional similarity between term1 and term2
+#'
+#' @export
+#'
+#' @examples
+#' kegg <- TCGAome::load_kegg()
+#' random_kegg_term1 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
+#' random_kegg_term2 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
+#' get_binary_similarity(kegg, random_kegg_term1, random_kegg_term2)
+#setGeneric("get_binary_similarity",
+#           signature = c("x", "term1", "term2"),
+#           function(x, term1, term2) standardGeneric("get_binary_similarity"))
+
+#' @aliases get_binary_similarity
+#' @export
+#setMethod("get_binary_similarity", c("x" = "GeneAnnotations",
+#                                         "term1" = "character",
+#                                         "term2" = "character"),
+get_binary_similarity <- function(x, term1, term2) {
+    column_names <- names(x@term2gene)
+    term1_genes <- x@term2gene[term1, ]$Gene[[1]]
+    term2_genes <- x@term2gene[term2, ]$Gene[[1]]
+    if (length(term1_genes) == 0 | length(term2_genes) == 0) {
+        # When no genes associated to any term they are disimilar
+        similarity <- 0.0
+    } else {
+        term_xor <- c(term1_genes[is.na(fmatch(term1_genes, term2_genes))],
+                      term2_genes[is.na(fmatch(term2_genes, term1_genes))])
+        similarity <- length(term_xor) / length(x@gene2term$Gene)
+    }
+    return(similarity)
+}
+
+get_binary_similarity_bc <- compiler::cmpfun(get_binary_similarity)
+
+
+#' get_ui_similarity()
+#'
+#' Function that gets the Union-Intersection functional similarity between two terms. That is
+#' a measure of the shared terms in the annotations resources.
+#'
+#' @param x The GeneAnnotations class on which the method will run.
+#' @param term1 The first term on which to calculate the functional similarity.
+#' @param term2 The second term on which to calculate the functional similarity.
+
+#' @return The UI functional similarity between term1 and term2
+#'
+#' @export
+#'
+#' @examples
+#' kegg <- TCGAome::load_kegg()
+#' random_kegg_term1 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
+#' random_kegg_term2 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
+#' get_ui_similarity(kegg, random_kegg_term1, random_kegg_term2)
+#setGeneric("get_ui_similarity",
+#           signature = c("x", "term1", "term2"),
+#           function(x, term1, term2) standardGeneric("get_ui_similarity"))
+
+#' @aliases get_ui_similarity
+#' @export
+#setMethod("get_ui_similarity", c("x" = "GeneAnnotations",
+#                                     "term1" = "character",
+#                                     "term2" = "character"),
+get_ui_similarity <- function(x, term1, term2) {
+    column_names <- names(x@term2gene)
+    term1_genes <- x@term2gene[term1, ]$Gene[[1]]
+    term2_genes <- x@term2gene[term2, ]$Gene[[1]]
+    if (length(term1_genes) == 0 | length(term2_genes) == 0) {
+        # When no genes associated to any term they are disimilar
+        similarity <- 0.0
+    } else {
+        term_intersection <- term1_genes[!is.na(fmatch(term1_genes, term2_genes))]
+        term_union <- c(term1_genes,
+                        term2_genes[is.na(fmatch(term2_genes, term1_genes))])
+        similarity <- length(term_intersection) / length(term_union)
+    }
+    return(similarity)
+}
+
+get_ui_similarity_bc <- compiler::cmpfun(get_ui_similarity)
+
+#' get_bc_similarity()
+#'
+#' Function that gets the Bray-Curtis functional similarity between two terms. That is
+#' a measure of the shared terms in the annotations resources.
+#'
+#' @param x The GeneAnnotations class on which the method will run.
+#' @param term1 The first term on which to calculate the functional similarity.
+#' @param term2 The second term on which to calculate the functional similarity.
+
+#' @return The Bray-Curtis functional similarity between term1 and term2
+#'
+#' @export
+#'
+#' @examples
+#' kegg <- TCGAome::load_kegg()
+#' random_kegg_term1 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
+#' random_kegg_term2 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
+#' get_bc_similarity(kegg, random_kegg_term1, random_kegg_term2)
+#setGeneric("get_bc_similarity",
+#           signature = c("x", "term1", "term2"),
+#           function(x, term1, term2) standardGeneric("get_bc_similarity"))
+
+#' @aliases get_bc_similarity
+#' @export
+#setMethod("get_bc_similarity", c("x" = "GeneAnnotations",
+#                                 "term1" = "character",
+#                                 "term2" = "character"),
+get_bc_similarity <- function(x, term1, term2) {
+    column_names <- names(x@term2gene)
+    term1_genes <- x@term2gene[term1, ]$Gene[[1]]
+    term2_genes <- x@term2gene[term2, ]$Gene[[1]]
+    if (length(term1_genes) == 0 | length(term2_genes) == 0) {
+        # When no genes associated to any term they are disimilar
+        similarity <- 0.0
+    } else {
+        term_intersection <- term1_genes[!is.na(fmatch(term1_genes, term2_genes))]
+        similarity <- ( 2 * length(term_intersection) ) / ( length(term1_genes) + length(term2_genes) )
+    }
+    return(similarity)
+}
+
+get_bc_similarity_bc <- compiler::cmpfun(get_bc_similarity)
+
+#' get_cosine_similarity()
+#'
+#' Function that gets the cosine functional similarity between two terms. That is
+#' a measure of the shared terms in the annotations resources.
+#'
+#' @param x The GeneAnnotations class on which the method will run.
+#' @param term1 The first term on which to calculate the functional similarity.
+#' @param term2 The second term on which to calculate the functional similarity.
+
+#' @return The cosine functional similarity between term1 and term2
+#'
+#' @export
+#'
+#' @examples
+#' kegg <- TCGAome::load_kegg()
+#' random_kegg_term1 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
+#' random_kegg_term2 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
+#' get_cosine_similarity(kegg, random_kegg_term1, random_kegg_term2)
+get_cosine_similarity <- function(x, term1, term2) {
+    column_names <- names(x@term2gene)
+    term1_genes <- x@term2gene[term1, ]$Gene[[1]]
+    term2_genes <- x@term2gene[term2, ]$Gene[[1]]
+    if (length(term1_genes) == 0 | length(term2_genes) == 0) {
+        # When no genes associated to any term they are disimilar
+        similarity <- 0.0
+    } else {
+        term_intersection <- term1_genes[!is.na(fmatch(term1_genes, term2_genes))]
+        similarity <- length(term_intersection) /  sqrt(length(term1_genes) * length(term2_genes))
+    }
+    return(similarity)
+}
+
+get_cosine_similarity_bc <- compiler::cmpfun(get_cosine_similarity)
+
+
+.createCluster = function(noCores, logfile = "/dev/null", export = NULL, lib = NULL) {
+    cl <- parallel::makeCluster(noCores, type = "SOCK", outfile = logfile)
+    if(!is.null(export)) clusterExport(cl, export)
+    if(!is.null(lib)) {
+        l_ply(lib, function(dum) {
+            parallel::clusterExport(cl, "dum", envir = environment())
+            parallel::clusterEvalQ(cl, library(dum, character.only = TRUE))
+        })
+    }
+    doSNOW::registerDoSNOW(cl)
+    return(cl)
+}
 
 #' get_term_distance_matrix()
 #'
@@ -398,6 +568,7 @@ setMethod("get_term_distance_matrix", c("x" = "GeneAnnotations",
               }
 
               if (!exists("terms_subset") || is.null(terms_subset)) {
+                  warning("Compute distance matrix on all terms. This may be time consuming")
                   terms_subset <- x@term2gene$Term
               }
 
@@ -412,16 +583,50 @@ setMethod("get_term_distance_matrix", c("x" = "GeneAnnotations",
                                               stringsAsFactors = F)
               rownames(similarity_matrix) <- terms_subset
               colnames(similarity_matrix) <- terms_subset
+
               # Calculates similarity on pairwise comparisons without repetition
               pairwise_term_combn <- combn(terms_subset, 2)
-              tallskinny_dist <- apply(pairwise_term_combn, 2, FUN = function(y) {
-                  get_functional_similarity(
-                      x, term1 = y[1], term2 = y[2], distance_measure = distance_measure)
-                  })
-              idx <- rbind(cbind(match(pairwise_term_combn[1 , ], terms_subset),
-                                 match(pairwise_term_combn[2 , ], terms_subset)),
-                           cbind(match(pairwise_term_combn[2 , ], terms_subset),
-                                 match(pairwise_term_combn[1 , ], terms_subset)))
+
+              # Set the functional similarity function
+              if (distance_measure == "binary") {
+                  get_similarity <- get_binary_similarity_bc
+              } else if (distance_measure == "UI") {
+                  get_similarity <- get_ui_similarity_bc
+              } else if (distance_measure == "bray-curtis") {
+                  get_similarity <- get_bc_similarity_bc
+              } else if (distance_measure == "cosine") {
+                  get_similarity <- get_cosine_similarity_bc
+              }
+              require(fastmatch)
+
+              # Computes the distance
+              #nodes <- parallel::detectCores()
+              #cl <- .createCluster(nodes)
+              #tallskinny_dist <- plyr::aaply(.data = pairwise_term_combn, .margin = 2, .fun = function(y) {
+              #    get_functional_similarity(
+              #        x, term1 = y[1], term2 = y[2], distance_measure = distance_measure)
+              #    }, .parallel = TRUE)
+              #stopCluster(cl)
+              #
+              # Snow
+              #nodes <- parallel::detectCores()
+              #cl <- snow::makeCluster(4, type = "SOCK")
+              #tallskinny_dist <- snow::parApply(
+              #    cl, pairwise_term_combn, 2,
+              #    FUN = function(y) {
+              #        get_similarity(x, term1 = y[1], term2 = y[2])
+              #    })
+              #snow::stopCluster(cl)
+              #
+              tallskinny_dist <- apply(
+                  pairwise_term_combn, 2,
+                  FUN = function(y) {
+                      get_similarity(x, term1 = y[1], term2 = y[2])
+                      })
+              idx <- rbind(cbind(fmatch(pairwise_term_combn[1 , ], terms_subset),
+                                 fmatch(pairwise_term_combn[2 , ], terms_subset)),
+                           cbind(fmatch(pairwise_term_combn[2 , ], terms_subset),
+                                 fmatch(pairwise_term_combn[1 , ], terms_subset)))
               similarity_matrix[idx] <- tallskinny_dist
 
               # Converts similarity matrix into distance matrix
@@ -464,4 +669,65 @@ setMethod("get_enrichment", c("x" = "GeneAnnotations", "gene_list" = "character"
               return(TCGAome::GeneListEnrichment(gene_list = gene_list, gene_annotations = x))
           })
 
+#' plot()
+#'
+#' Plots the gene annotations
+#'
+#' @param x The GeneAnnotations class on which the method will run.
 
+#' @return The ggplot2 plot
+#'
+#' @export
+#'
+#' @examples
+#' TCGAome::plot(hpo)
+setGeneric("plot",
+           signature = c("x"),
+           function(x) standardGeneric("plot"))
+
+#' @aliases plot
+#' @export
+setMethod("plot",
+          c("x" = "GeneAnnotations"),
+          function(x) {
+
+              gene_dist = data.frame(
+                  Gene = x@gene2term$Gene,
+                  Associations = unlist(lapply(x@gene2term$Term, FUN = length)),
+                  Class = "Gene"
+              )
+
+              term_dist = data.frame(
+                  Term = x@term2gene$Term,
+                  Associations = unlist(lapply(x@term2gene$Gene, FUN = length)),
+                  Class = "Term"
+              )
+
+              ## Plots gene associations
+              plot1 <- ggplot2::ggplot(
+                  data = gene_dist,
+                  ggplot2::aes(x = Associations)) +
+                  ggplot2::geom_histogram(ggplot2::aes(y=..density..),      # Histogram with density instead of count on y-axis
+                                          binwidth=5,
+                                          colour="black", fill="white") +
+                  ggplot2::geom_density(alpha=.2, fill="#FF6666") +  # Overlay with transparent density plot
+                  ggplot2::geom_vline(ggplot2::aes(xintercept=mean(Associations, na.rm=T)),   # Ignore NA values for mean
+                             color="red", linetype="dashed", size=1) +
+                  ggplot2::scale_x_continuous("No. of terms associated per gene") +
+                  ggplot2::theme_bw()
+
+              ## Plots gene associations
+              plot2 <- ggplot2::ggplot(
+                  data = term_dist,
+                  ggplot2::aes(x = Associations)) +
+                  ggplot2::geom_histogram(ggplot2::aes(y=..density..),      # Histogram with density instead of count on y-axis
+                                          binwidth=5,
+                                          colour="black", fill="white") +
+                  ggplot2::geom_density(alpha=.2, fill="#FF6666") +  # Overlay with transparent density plot
+                  ggplot2::geom_vline(ggplot2::aes(xintercept=mean(Associations, na.rm=T)),   # Ignore NA values for mean
+                                      color="red", linetype="dashed", size=1) +
+                  ggplot2::scale_x_continuous("No. of genes associated per term") +
+                  ggplot2::theme_bw()
+
+              cowplot::plot_grid(plot1, plot2)
+          })
