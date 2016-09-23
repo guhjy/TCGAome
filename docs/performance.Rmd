@@ -1,8 +1,8 @@
 ---
 title: "Performance considerations on TCGAome"
-author: "priesgo"
+author: "Pablo Riesgo"
 date: "September 20, 2016"
-output: html_document
+output: pdf_document
 ---
 
 
@@ -15,14 +15,32 @@ library(ggplot2)
 devtools::load_all(".")
 ```
 
+## Motivation
 
-We will test the performance of the common operations that we require to map terms to genes. For this purpose we will use two object types the native data.frame and the data.frame subclass data.table [https://cran.r-project.org/web/packages/data.table/index.html](https://cran.r-project.org/web/packages/data.table/index.html). We will also use the library fastmatch [https://cran.r-project.org/web/packages/fastmatch/index.html](https://cran.r-project.org/web/packages/fastmatch/index.html) and its native counterpart match.
+We will test the performance of the common operations that we require to map terms to genes and vice versa: basic operations on data tables and specially set operations are critical (i.e.: union, intersection, etc.). For this purpose we will compare two object types the native data.frame and the data.frame subclass data.table [https://cran.r-project.org/web/packages/data.table/index.html](https://cran.r-project.org/web/packages/data.table/index.html). We will also compare the library fastmatch [https://cran.r-project.org/web/packages/fastmatch/index.html](https://cran.r-project.org/web/packages/fastmatch/index.html) and its native counterpart match. Also, we will evaluate the improvement obtained by using functions compiled in byte code.
+
+Critical components that are executed several thousand times, like the functions that compute similarity between terms, have been implemented as functions avoiding S4 method dispatching as it adds an undesired overhead.
 
 No effort has been done on parallelization or implementation in C/C++.
 
+The following benchmarks have been performed on fixed and relatively small datasets, we did not analyse how these techniques behave when data scales up.
+
+### data.table
+
+As stated in its CRAN site "Fast aggregation of large data (e.g. 100GB in RAM), fast ordered joins, fast add/modify/delete of columns by group using no copies at all, list columns and a fast file reader (fread).". It is very likely that the datasets under analysis are not big enough to observe the advantages of using data.table. Furthermore, as we will see using data.table adds an overhead when dealing with the dataset under analysis.
+
+### fastmatch
+
+fastmatch relies on keeping the hash table in memory, thus critical improvement in performance will only be observed when accessing repeteadly the same data. This justifies the dispersed distributions on the execution time that we will observe as compared to native match. For this reason the median will be used to compare native match and fastmatch performance.
+
+
+## Test data
+
+The test data is based on the Gene Ontology annotations for biological process. We will compute our tests on the data structure that associates terms to genes (i.e.: term2gene).
+
 ```{r, warning = FALSE, message = FALSE}
 ## Loads raw annotations
-raw_annotations <- TCGAome::load_kegg()@raw_annotations
+raw_annotations <- TCGAome::load_goa(ontology = "BP")@raw_annotations
 
 # Creates the data.frame
 term2gene_df <- aggregate(data = raw_annotations,
@@ -46,7 +64,14 @@ get_random_term <- function(raw_annotations) {
 }
 ```
 
-### Single column selection
+Additionally, we will use two sets of 1000 elements for the set operations.
+
+```{r, warning = FALSE, message = FALSE}
+first_set = sample(10000, size = 1000, replace = FALSE)
+second_set = sample(10000, size = 1000, replace = FALSE)
+```
+
+## Single column selection
 
 Evaluate the performance of different methods for column selection.
 
@@ -86,7 +111,7 @@ res <- microbenchmark(
 ```
 
 ```{r, warning = FALSE, message = FALSE, echo = FALSE}
-autoplot(res) + 
+autoplot(res) +
     ggplot2::scale_x_discrete(
         name = NULL,
         labels = rev(c("1. $ operator DF",
@@ -110,7 +135,7 @@ print(res)
 The conclusion is that when using a data.frame or a data.table the **fastest method is the $ operator**.
 Beware that package resolution is a big burden on performance.
 
-### Row selection
+## Row selection
 
 Evaluate the performance of different methods for row selection. Usually number of rows >> number of columns and thus the performance when selecting rows is a stronger limitation. In this case we will use as before two objects data.frame and data.table, but also combined with the library fastmatch.
 
@@ -139,7 +164,7 @@ res <- microbenchmark(
 ```
 
 ```{r, warning = FALSE, message = FALSE, echo = FALSE}
-autoplot(res) + 
+autoplot(res) +
     ggplot2::scale_x_discrete(
         name = NULL,
         labels = rev(c("1. Cell value comparison DF",
@@ -156,18 +181,16 @@ print(res)
 
 There are two alternatives with very close times, only when looking at the median we can conclude that the **fastest row selection is by row name matching on a data.frame**. The implementation using **fastmatch on a data.frame** gets almost the same average execution time.
 
-### Intersection
+## Intersection
 
 Evaluate the performance of intersection between sets in a character vector.
 
 1. Intersect using the %in% operator
 2. Intersect using the intersect() function
-3. Intersect using fastmatch
+3. Intersect using native match
+4. Intersect using fastmatch
 
 ```{r, warning = FALSE, message = FALSE}
-first_set = sample(1000, size = 100, replace = FALSE)
-second_set = sample(1000, size = 100, replace = FALSE)
-
 res <- microbenchmark(
     "1" = first_set[first_set %in% second_set],
     "2" = intersect(first_set, second_set),
@@ -178,7 +201,7 @@ res <- microbenchmark(
 ```
 
 ```{r, warning = FALSE, message = FALSE, echo = FALSE}
-autoplot(res) + 
+autoplot(res) +
     ggplot2::scale_x_discrete(
         name = NULL,
         labels = rev(c("1. %in% operator",
@@ -193,7 +216,7 @@ print(res)
 The conclusion is that the **fastest intersection is provided by fastmatch**.
 
 
-### Union
+## Union
 
 1. Union using the union() function
 2. Union using the unique() function and concatenation
@@ -210,11 +233,11 @@ res <- microbenchmark(
 ```
 
 ```{r, warning = FALSE, message = FALSE, echo = FALSE}
-autoplot(res) + 
+autoplot(res) +
     ggplot2::scale_x_discrete(
         name = NULL,
         labels = rev(c("1. %in% operator",
-                   "2. intersect() function",
+                   "2. unique() function",
                    "3. Native match",
                    "4. fastmatch"
                    )),
@@ -224,7 +247,38 @@ print(res)
 
 The conclusion is that the **fastest union is provided by fastmatch**.
 
-### XOR (assuming intersection and union is already computed)
+## Difference
+
+1. Difference using the %in% operator
+2. Difference using the setdiff() function
+3. Difference using native match
+4. Difference using fastmatch
+
+```{r, warning = FALSE, message = FALSE}
+res <- microbenchmark(
+    "1" = first_set [! first_set %in% second_set],
+    "2" = setdiff(first_set, second_set),
+    "3" = first_set [is.na(match(first_set, second_set))],
+    "4" = first_set [is.na(fmatch(first_set, second_set))]
+)
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+autoplot(res) +
+    ggplot2::scale_x_discrete(
+        name = NULL,
+        labels = rev(c("1. %in% operator",
+                   "2. setdiff() function",
+                   "3. Native match",
+                   "4. fastmatch"
+                   )),
+        limits = rev(levels(res$expr)))
+print(res)
+```
+
+The conclusion is that the **fastest difference is provided by fastmatch**.
+
+## XOR
 
 1. XOR using the %in% operator (assuming intersection and union is already computed)
 2. XOR using native match (assuming intersection and union is already computed)
@@ -238,16 +292,16 @@ intersection_set = first_set[!is.na(fmatch(first_set, second_set))]
 res <- microbenchmark(
     "1" = union_set[!union_set %in% intersection_set],
     "2" = union_set[is.na(match(union_set, intersection_set))],
-    "3" = c(first_set[is.na(match(first_set, second_set))], 
+    "3" = c(first_set[is.na(match(first_set, second_set))],
                         second_set[is.na(match(second_set, first_set))]),
     "4" = union_set[is.na(fmatch(union_set, intersection_set))],
-    "5" = c(first_set[is.na(fmatch(first_set, second_set))], 
+    "5" = c(first_set[is.na(fmatch(first_set, second_set))],
                         second_set[is.na(fmatch(second_set, first_set))])
 )
 ```
 
 ```{r, warning = FALSE, message = FALSE, echo = FALSE}
-autoplot(res) + 
+autoplot(res) +
     ggplot2::scale_x_discrete(
         name = NULL,
         labels = rev(c("1. %in% operator",
@@ -263,7 +317,15 @@ print(res)
 The conclusion is that the **fastest union is provided by fastmatch**. If intersection and union are already computed use the first version, otherwise use the alternative implementation.
 
 
-### Compiling function to byte code
+## Compiling function to byte code
+
+The just-in-time compilation allows that the code of our R code is translated into byte code and save some interpretation time at execution time. Our implementation is based on the compiler package included in base R.
+
+```{r, eval= FALSE}
+get_ui_similarity_bc <- compiler::cmpfun(get_ui_similarity)
+```
+
+When benchmarking the execution time of several JIT compiled functions with their plain R counterparts we observe a slight increase in performance.
 
 ```{r, warning = FALSE, message = FALSE}
 random_term_1 <- get_random_term(raw_annotations)
@@ -282,7 +344,7 @@ res <- microbenchmark(
 ```
 
 ```{r, warning = FALSE, message = FALSE, echo = FALSE}
-autoplot(res) + 
+autoplot(res) +
     ggplot2::scale_x_discrete(
         name = NULL,
         labels = rev(c("1. Cosine similarity",
@@ -297,64 +359,3 @@ autoplot(res) +
         limits = rev(levels(res$expr)))
 print(res)
 ```
-
-
-### Initializing TermsClustering
-
-```{r, warning = FALSE, message = FALSE}
-gene_list <- c("ZNF638", "HNRNPU", "PPIAL4G", "RAPH1", "USP7", "SUMO1P3",
-          "TMEM189.UBE2V1", "ZNF837", "LPCAT4", "ZFPL1", "STAT3", "XRCC1",
-          "STMN1", "PGR", "RB1", "KDR", "YBX1", "YAP1", "FOXO3", "SYK", "RAB17",
-          "TTC8", "SLC22A5", "C3orf18", "ANKRA2", "LBR", "B3GNT5", "ANP32E",
-          "JOSD1", "ZNF695", "ESR1", "INPP4B", "PDK1", "TSC2", "AR", "HSPA1A",
-          "CDH3", "SMAD4", "CASP7", "GMPS", "NDC80", "EZH2", "MELK", "CDC45",
-          "CRY2", "KLHDC1", "MEIS3P1", "FBXL5", "EHD2", "CCNB1", "GSK3A",
-          "DVL3", "NFKB1", "COL6A1", "CCND1", "BAK1")
-kegg_enrichment <- TCGAome::get_enrichment(kegg, gene_list = gene_list)
-kegg_term_clustering <- TCGAome::TermsClustering(
-    kegg, kegg_enrichment, "cosine", significance_thr = 0.05, 
-    adj_method = "none", max_clusters = 10)
-
-representatives <- TCGAome::.select_representatives(
-                  kegg_term_clustering@significant_results)
-distance_matrix_repr <- as.dist(as.matrix(
-                  kegg_term_clustering@distance_matrix)[
-                      unlist(representatives$repr_term),
-                      unlist(representatives$repr_term)])
-
-
-res <- microbenchmark(
-    "1" = TCGAome::get_significant_results(
-                      kegg_enrichment, 0.05, "none"),
-    "2" = TCGAome::get_term_distance_matrix(
-                  kegg, "cosine",
-                  terms_subset = kegg_term_clustering@significant_results$Term),
-    "3" = TCGAome::.pam_clustering(
-                  kegg_term_clustering@distance_matrix,
-                  max_clusters = kegg_term_clustering@max_clusters),
-    "4" = TCGAome::.multidimensional_scaling(
-                  kegg_term_clustering@distance_matrix),
-    "5" = vapply(
-                  kegg_term_clustering@significant_results$Term,
-                  FUN = function(term) {
-                      TCGAome::get_term_freq(
-                          kegg, term)
-                  }, 
-                  FUN.VALUE = numeric(1)),
-    "6" = TCGAome::.select_representatives(
-                  kegg_term_clustering@significant_results),
-    "7" = distance_matrix_repr <- as.dist(as.matrix(
-                  kegg_term_clustering@distance_matrix)[
-                      unlist(representatives$repr_term),
-                      unlist(representatives$repr_term)]),
-    "8" = TCGAome::.multidimensional_scaling(
-                  distance_matrix_repr),
-    unit = "milliseconds",
-    times = 10L
-)
-```
-
-
-system.time(goa <- TCGAome::load_goa())
-system.time(goa_enrichment <- TCGAome::get_enrichment(goa, gene_list = gene_list))
-system.time(goa_term_clustering <- TCGAome::TermsClustering(goa, goa_enrichment, distance_measure = "cosine", significance_thr = 0.05, adj_method = "none", max_clusters = 10))
