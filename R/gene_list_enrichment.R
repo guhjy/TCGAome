@@ -50,20 +50,29 @@ GeneListEnrichment <- function(...) new("GeneListEnrichment",...)
 
 ## Computes the enrichment with the Fisher test for every term
 .compute_enrichment <- function(gene_list, gene_annotations) {
+    require(fastmatch)
     all_genes <- gene_annotations@gene2term$Gene
     all_terms <- gene_annotations@term2gene$Term
-    pvalues <- as.double(sapply(all_terms, function(term) {
-        ## FIXME: there is a problem with the usage of fastmatch
-        associated_genes = as.character(unlist(
-            gene_annotations@term2gene[fastmatch::fmatch(term, gene_annotations@term2gene$Term), ]$Gene))
-        fisher.test(matrix(c(
-            length(fastmatch::fmatch(gene_list, associated_genes)),
-            length(associated_genes[! associated_genes %in% gene_list]),
-            length(gene_list[! gene_list %in% associated_genes]),
-            length(all_genes[! all_genes %in% union(associated_genes, gene_list)])
-        ), nrow = 2, ncol = 2),
-        alternative = "greater")$p.value
-    }))
+    pvalues <- as.double(
+        vapply(all_terms,
+               FUN = function(term) {
+                   associated_genes = as.character(unlist(
+                       gene_annotations@term2gene[term, ]$Gene))
+                   intersection_genes <- gene_list[!is.na(fmatch(gene_list, associated_genes))]
+                   union_genes <- c(gene_list, associated_genes[is.na(fmatch(associated_genes, gene_list))])
+                   fisher.test(matrix(c(
+                       # intersection between gene_list and associated_genes
+                       length(intersection_genes),
+                       # associated_genes not in gene_list
+                       length(associated_genes [is.na(fmatch(associated_genes, intersection_genes))]),
+                       # gene_list not in associated_genes
+                       length(gene_list [is.na(fmatch(gene_list, intersection_genes))]),
+                       # genes not in associated_genes and not in gene_list
+                       length(all_genes [is.na(fmatch(all_genes, union_genes))])
+                    ), nrow = 2, ncol = 2),
+                    alternative = "greater")$p.value
+                },
+               FUN.VALUE = numeric(1)))
     return(pvalues)
 }
 
@@ -71,16 +80,23 @@ setMethod("initialize",
           signature(.Object = "GeneListEnrichment"),
           function(.Object, gene_list, gene_annotations){
               ## Initialize input data
+              futile.logger::flog.info("Initializing GeneListEnrichment...")
               .Object@gene_list <- gene_list
+              futile.logger::flog.info("Input gene list is of length : %d", length(.Object@gene_list))
 
               ## Checks object validity
+              futile.logger::flog.info("Checking object's validity...")
               validObject(.Object)
+              futile.logger::flog.info("Object is valid!")
 
               ## Clear NA_character genes
               .Object@gene_list <- .Object@gene_list[!is.na(.Object@gene_list)]
+              futile.logger::flog.info("After removing missing values input gene list is of length : %d", length(.Object@gene_list))
 
               ## Computes enrichment
+              futile.logger::flog.info("Computing Fisher test enrichment on the gene list...")
               pvalues <- .compute_enrichment(.Object@gene_list, gene_annotations)
+              futile.logger::flog.info("Most significant p-value %s and less significant %s", min(pvalues), max(pvalues))
 
               ## Computes the relative frequency of every term
               #freqs <- as.double(sapply(all_terms, function(term){
