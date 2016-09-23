@@ -2,7 +2,7 @@
 title: "Performance considerations on TCGAome"
 author: "Pablo Riesgo"
 date: "September 20, 2016"
-output: pdf_document
+output: html_document
 ---
 
 
@@ -358,4 +358,11 @@ autoplot(res) +
                    )),
         limits = rev(levels(res$expr)))
 print(res)
+```
+
+
+## Session info
+
+```{r}
+sessionInfo()
 ```
