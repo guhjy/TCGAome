@@ -55,11 +55,41 @@ We can visually explore the distribution of annotations and explore the differen
 
 ```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 plot(goa_bp)
-plot(goa_mf)
-plot(goa_cc)
-plot(kegg)
-plot(omim)
-plot(hpo)
+```
+
+or alternatively:
+
+```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+plot_scatter(goa_bp)
+plot_violin(goa_bp)
+```
+
+Comparing the different annotations we can observe that the three GO ontologies are the richest ... To be continued... 
+
+```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+goa_bp_violin <- plot_violin(goa_bp) + ggplot2::guides(colour=FALSE)
+goa_mf_violin <- plot_violin(goa_mf) + ggplot2::guides(colour=FALSE)
+goa_cc_violin <- plot_violin(goa_cc) + ggplot2::guides(colour=FALSE)
+kegg_violin <- plot_violin(kegg) + ggplot2::guides(colour=FALSE)
+omim_violin <- plot_violin(omim) + ggplot2::guides(colour=FALSE)
+hpo_violin <- plot_violin(hpo) + ggplot2::guides(colour=FALSE)
+
+cowplot::plot_grid(goa_bp_violin, goa_mf_violin, goa_cc_violin, 
+                   kegg_violin, omim_violin, hpo_violin,
+                   nrow = 2)
+```
+
+```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+goa_bp_scatter <- plot_scatter(goa_bp) + ggplot2::guides(colour=FALSE, shape=FALSE)
+goa_mf_scatter <- plot_scatter(goa_mf) + ggplot2::guides(colour=FALSE, shape=FALSE)
+goa_cc_scatter <- plot_scatter(goa_cc) + ggplot2::guides(colour=FALSE, shape=FALSE)
+kegg_scatter <- plot_scatter(kegg) + ggplot2::guides(colour=FALSE, shape=FALSE)
+omim_scatter <- plot_scatter(omim) + ggplot2::guides(colour=FALSE, shape=FALSE)
+hpo_scatter <- plot_scatter(hpo) + ggplot2::guides(colour=FALSE, shape=FALSE)
+
+cowplot::plot_grid(goa_bp_scatter, goa_mf_scatter, goa_cc_scatter, 
+                   kegg_scatter, omim_scatter, hpo_scatter,
+                   nrow = 2)
 ```
 
 ### Metrics

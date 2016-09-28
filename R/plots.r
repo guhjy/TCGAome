@@ -16,7 +16,7 @@ black <- rgb(as.integer(as.hexmode("00")), as.integer(as.hexmode("00")), as.inte
 
 
 # Plots enriched GO terms in a scatter plot after clustering and filtering
-plot_scatter <- function(cluster_representatives, output_dir) {
+plot_scatter_old <- function(cluster_representatives, output_dir) {
     file_path <- paste(output_dir, "GO_scatterplot.png", sep = "/")
 
     # Plot GO terms

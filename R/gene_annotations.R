@@ -679,9 +679,10 @@ setMethod("get_enrichment", c("x" = "GeneAnnotations", "gene_list" = "character"
               return(TCGAome::GeneListEnrichment(gene_list = gene_list, gene_annotations = x))
           })
 
-#' plot()
+
+#' plot_violin()
 #'
-#' Plots the gene annotations
+#' Plots the gene annotations violin distribution
 #'
 #' @param x The GeneAnnotations class on which the method will run.
 
@@ -690,14 +691,74 @@ setMethod("get_enrichment", c("x" = "GeneAnnotations", "gene_list" = "character"
 #' @export
 #'
 #' @examples
-#' TCGAome::plot(hpo)
-setGeneric("plot",
+#' TCGAome::plot_violin(hpo)
+setGeneric("plot_violin",
            signature = c("x"),
-           function(x) standardGeneric("plot"))
+           function(x) standardGeneric("plot_violin"))
 
-#' @aliases plot
+#' @aliases plot_violin
 #' @export
-setMethod("plot",
+setMethod("plot_violin",
+          c("x" = "GeneAnnotations"),
+          function(x) {
+
+              gene_dist <- data.frame(
+                  class = "gene",
+                  associations = unlist(lapply(x@gene2term$Term, FUN = length))
+              )
+              term_dist <- data.frame(
+                  class = "term",
+                  associations = unlist(lapply(x@term2gene$Gene, FUN = length))
+              )
+              annotation_dist <- rbind(gene_dist, term_dist)
+
+              ## Plots gene associations
+              mb <- as.numeric(1:10 %o% 10 ^ (0:4))
+              plot <- ggplot2::ggplot(data = annotation_dist,
+                                       ggplot2::aes(class, associations, colour = class)) +
+                  ggplot2::geom_violin(fill='grey', alpha = 0.1, lwd = 0.1) +
+                  ggplot2::geom_boxplot(width=0.1, lwd = 0.1,
+                                        outlier.size = 0.2, outlier.shape = 4) +
+                  ggplot2::scale_y_log10(
+                      breaks = c(1, 10, 100, 1000, 10000),
+                      minor_breaks = mb) +
+                  ggplot2::labs(x = NULL,
+                                y = "Associations",
+                                colour = NULL, shape = NULL,
+                                title = x@name) +
+                  ggplot2::scale_color_brewer(
+                      palette = "Set1") +
+                  ##ggplot2::guides(colour=FALSE) +
+                  ggplot2::theme_bw() +
+                  ggplot2::theme(text = ggplot2::element_text(size=6),
+                                 axis.text.x = ggplot2::element_text(size=6), #, angle = 45),
+                                 axis.text.y = ggplot2::element_text(size=6),
+                                 panel.grid.minor = ggplot2::element_line(size = 0.1))
+                                 ##line = ggplot2::element_line(size = 0.5))
+
+              plot
+          })
+
+
+#' plot_scatter()
+#'
+#' Plots the gene annotations scatter plot
+#'
+#' @param x The GeneAnnotations class on which the method will run.
+
+#' @return The ggplot2 plot
+#'
+#' @export
+#'
+#' @examples
+#' TCGAome::plot_scatter(hpo)
+setGeneric("plot_scatter",
+           signature = c("x"),
+           function(x) standardGeneric("plot_scatter"))
+
+#' @aliases plot_scatter
+#' @export
+setMethod("plot_scatter",
           c("x" = "GeneAnnotations"),
           function(x) {
 
@@ -719,22 +780,14 @@ setMethod("plot",
               annotation_dist$ngenes <- as.numeric(annotation_dist$ngenes)
               annotation_dist$nterms <- as.numeric(annotation_dist$nterms)
 
-              gene_dist <- data.frame(
-                  class = "gene",
-                  associations = unlist(lapply(x@gene2term$Term, FUN = length))
-              )
-              term_dist <- data.frame(
-                  class = "term",
-                  associations = unlist(lapply(x@term2gene$Gene, FUN = length))
-              )
-              annotation_dist2 <- rbind(gene_dist, term_dist)
-
               ## Plots gene associations
               mb <- as.numeric(1:10 %o% 10 ^ (0:4))
-              plot1 <- ggplot2::ggplot(data = annotation_dist,
-                                      ggplot2::aes(x = nterms, y = ngenes)) +
+              plot <- ggplot2::ggplot(data = annotation_dist,
+                                       ggplot2::aes(x = nterms, y = ngenes)) +
                   ggplot2::geom_point(ggplot2::aes(shape = class,
-                                                   color = class)) +
+                                                   color = class),
+                                      size = 0.5,
+                                      stroke = 0.2) +
                   ggplot2::scale_y_log10(
                       breaks = c(1, 10, 100, 1000, 10000),
                       minor_breaks = mb) +
@@ -745,24 +798,42 @@ setMethod("plot",
                   ggplot2::labs(x = "# terms",
                                 y = "# genes",
                                 colour = NULL, shape = NULL,
-                                title = paste(x@name, "joint dist", sep = " - ")) +
+                                title = x@name) +
                   ggplot2::scale_color_brewer(
                       palette = "Set1") +
-                  ggplot2::theme_bw()
+                  ggplot2::theme_bw() +
+                  ggplot2::theme(text = ggplot2::element_text(size=6),
+                                 axis.text.x = ggplot2::element_text(size=6), #, angle = 45),
+                                 axis.text.y = ggplot2::element_text(size=6),
+                                 panel.grid.minor = ggplot2::element_line(size = 0.1))
 
-              plot2 <- ggplot2::ggplot(data = annotation_dist2,
-                                      ggplot2::aes(class, associations, colour = class)) +
-                  ggplot2::geom_violin() +
-                  ggplot2::scale_y_log10(
-                      breaks = c(1, 10, 100, 1000, 10000),
-                      minor_breaks = mb) +
-                  ggplot2::labs(x = NULL,
-                                y = "Associations",
-                                colour = NULL, shape = NULL,
-                                title = paste(x@name, "disjoint dist", sep = " - ")) +
-                  ggplot2::scale_color_brewer(
-                      palette = "Set1") +
-                  ggplot2::theme_bw()
+              plot
+          })
 
+
+
+#' plot()
+#'
+#' Plots the gene annotations
+#'
+#' @param x The GeneAnnotations class on which the method will run.
+
+#' @return The ggplot2 plot
+#'
+#' @export
+#'
+#' @examples
+#' TCGAome::plot(hpo)
+setGeneric("plot",
+           signature = c("x"),
+           function(x) standardGeneric("plot"))
+
+#' @aliases plot
+#' @export
+setMethod("plot",
+          c("x" = "GeneAnnotations"),
+          function(x) {
+              plot1 <- TCGAome::plot_scatter(x)
+              plot2 <- TCGAome::plot_violin(x)
               cowplot::plot_grid(plot1, plot2, nrow = 2)
           })
