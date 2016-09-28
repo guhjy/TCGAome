@@ -4,17 +4,13 @@
 \alias{get_term_distance_matrix}
 \title{get_term_distance_matrix()}
 \usage{
-get_term_distance_matrix(x, distance_measure, ...)
+get_term_distance_matrix(x, distance_measure, ..., terms_subset = NULL)
 }
 \arguments{
 \item{x}{The GeneAnnotations class on which the method will run.}
 
 \item{distance_measure}{The binary distance method (one of UI, binary,
 bray-curtis, cosine)}
-
-\item{term1}{The first term on which to calculate the functional similarity.}
-
-\item{term2}{The second term on which to calculate the functional similarity.}
 
 \item{terms_subset}{A subset of terms on which to calculate the distance matrix}
 }

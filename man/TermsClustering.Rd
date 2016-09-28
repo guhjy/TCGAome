@@ -25,6 +25,11 @@ The TermsClustering object
 \description{
 The constructor for TermsClustering
 }
+\section{Slots}{
+
+\describe{
+\item{\code{max_clusters}}{The maximum number of clusters to evaluate (default: 10)}
+}}
 \examples{
 TODO
 }

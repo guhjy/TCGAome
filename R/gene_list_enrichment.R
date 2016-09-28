@@ -12,6 +12,7 @@ NULL
 #' @slot raw_enrichment A data.frame with the enrichment results
 #'
 #' @export
+#' @import fastmatch
 #'
 setClass("GeneListEnrichment",
          representation(gene_list = "character",

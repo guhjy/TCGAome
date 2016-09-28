@@ -2,12 +2,14 @@
 % Please edit documentation in R/gene_annotations.R
 \name{load_kegg}
 \alias{load_kegg}
-\title{Reads KEGG pathways for Human genes and for all Uniprot. No electronically inferred annotations (IEA)}
+\title{Reads KEGG pathways for Human genes and for all Uniprot.
+No electronically inferred annotations (IEA)}
 \usage{
 load_kegg()
 }
 \description{
-Reads KEGG pathways for Human genes and for all Uniprot. No electronically inferred annotations (IEA)
+Reads KEGG pathways for Human genes and for all Uniprot.
+No electronically inferred annotations (IEA)
 }
 \examples{
 kegg = load_kegg()

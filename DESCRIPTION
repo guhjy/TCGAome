@@ -44,7 +44,7 @@ Imports:
     VennDiagram
 License: MIT
 LazyData: true
-RoxygenNote: 5.0.1
+RoxygenNote: 5.0.1.9000
 Suggests:
     testthat,
     knitr,

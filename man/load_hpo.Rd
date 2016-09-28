@@ -8,7 +8,8 @@
   load_hpo(hpo_annotations_url = "http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastStableBuild/artifact/annotation/ALL_SOURCES_TYPICAL_FEATURES_phenotype_to_genes.txt")
 }
 \arguments{
-\item{hpo_annotations_url}{The URL to HPO annotations to genes. [default: "http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastStableBuild/artifact/annotation/ALL_SOURCES_TYPICAL_FEATURES_phenotype_to_genes.txt"]}
+\item{hpo_annotations_url}{The URL to HPO annotations to genes.
+[default: "http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastStableBuild/artifact/annotation/ALL_SOURCES_TYPICAL_FEATURES_phenotype_to_genes.txt"]}
 }
 \description{
 Reads Human Phenotype Ontology (HPO) annotations.

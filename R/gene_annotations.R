@@ -386,6 +386,7 @@ setMethod("get_functional_similarity", c("x" = "GeneAnnotations",
 
 #' @aliases get_binary_similarity
 #' @export
+#' @import fastmatch
 #setMethod("get_binary_similarity", c("x" = "GeneAnnotations",
 #                                         "term1" = "character",
 #                                         "term2" = "character"),
@@ -431,6 +432,7 @@ get_binary_similarity_bc <- compiler::cmpfun(get_binary_similarity)
 
 #' @aliases get_ui_similarity
 #' @export
+#' @import fastmatch
 #setMethod("get_ui_similarity", c("x" = "GeneAnnotations",
 #                                     "term1" = "character",
 #                                     "term2" = "character"),
@@ -476,6 +478,7 @@ get_ui_similarity_bc <- compiler::cmpfun(get_ui_similarity)
 
 #' @aliases get_bc_similarity
 #' @export
+#' @import fastmatch
 #setMethod("get_bc_similarity", c("x" = "GeneAnnotations",
 #                                 "term1" = "character",
 #                                 "term2" = "character"),
@@ -507,6 +510,7 @@ get_bc_similarity_bc <- compiler::cmpfun(get_bc_similarity)
 #' @return The cosine functional similarity between term1 and term2
 #'
 #' @export
+#' @import fastmatch
 #'
 #' @examples
 #' kegg <- TCGAome::load_kegg()
@@ -604,7 +608,6 @@ setMethod("get_term_distance_matrix", c("x" = "GeneAnnotations",
               } else if (distance_measure == "cosine") {
                   get_similarity <- get_cosine_similarity_bc
               }
-              require(fastmatch)
 
               # Computes the distance
               #nodes <- parallel::detectCores()

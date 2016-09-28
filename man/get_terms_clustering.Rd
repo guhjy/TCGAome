@@ -4,10 +4,15 @@
 \alias{get_terms_clustering}
 \title{get_terms_clustering()}
 \usage{
-get_terms_clustering(x, distance_measure, significance_threshold, adj_method)
+get_terms_clustering(x, gene_annotations, distance_measure,
+  significance_threshold, adj_method, max_clusters)
 }
 \arguments{
 \item{x}{The GeneListEnrichment class on which the method will run.}
+
+\item{gene_annotations}{The GeneAnnotations on which the enrichment was computed.}
+
+\item{distance_measure}{The similarity distance metric employed.}
 
 \item{significance_threshold}{The significance enrichment threshold}
 

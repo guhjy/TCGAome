@@ -2,23 +2,27 @@
 % Please edit documentation in R/gene_annotations.R
 \name{load_goa}
 \alias{load_goa}
-\title{Reads Gene Ontology Annotations (GOA) for Human genes and for all Uniprot. No electronically inferred annotations (IEA)}
+\title{Reads Gene Ontology Annotations (GOA) for Human genes and for all Uniprot.
+No electronically inferred annotations (IEA)}
 \usage{
 load_goa(search_universe = "human", ontology = "BP",
   goa_uniprot_annotations_url = "http://geneontology.org/gene-associations/gene_association.goa_uniprot_noiea.gz")
 }
 \arguments{
-\item{search_universe}{Two possible values "human" or "uniprot". The first provides associations to GO of human genes,
-while the second considers all genes registered in Uniprot. [default: "human"]}
+\item{search_universe}{Two possible values "human" or "uniprot".
+The first provides associations to GO of human genes,
+while the second considers all genes registered in Uniprot.
+[default: "human"]}
 
-\item{ontology}{The ontology within Gene Ontology: "BP", "CC" or "MF". [default: "BP"]}
+\item{ontology}{The ontology within Gene Ontology: "BP", "CC" or "MF".
+[default: "BP"]}
 
-\item{goa_uniprot_annotations_url}{The URL to Uniprot GOA. [default: "http://geneontology.org/gene-associations/gene_association.goa_uniprot_noiea.gz"]}
-
-\item{goa_human_annotations_url}{The URL to human GOA. [default: "http://geneontology.org/gene-associations/gene_association.goa_human.gz"]}
+\item{goa_uniprot_annotations_url}{The URL to Uniprot GOA.
+[default: "http://geneontology.org/gene-associations/gene_association.goa_uniprot_noiea.gz"]}
 }
 \description{
-Reads Gene Ontology Annotations (GOA) for Human genes and for all Uniprot. No electronically inferred annotations (IEA)
+Reads Gene Ontology Annotations (GOA) for Human genes and for all Uniprot.
+No electronically inferred annotations (IEA)
 }
 \examples{
 goa = load_goa()

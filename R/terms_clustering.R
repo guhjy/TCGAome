@@ -31,6 +31,7 @@ NULL
 #' @slot silhouette The silhouette average width for each number of clusters
 #'
 #' @export
+#' @import cluster
 #'
 setClass("TermsClustering",
          representation(distance_measure = "character",
@@ -114,7 +115,6 @@ TermsClustering <- function(...) new("TermsClustering",...)
 
 ## PAM and silhouette clustering
 .pam_clustering <- function(distance, max_clusters = 10) {
-    require(cluster)
     ## if the max_clusters is set to null or 0 then it
     ## takes the number of elements minus 1
     if (is.null(max_clusters) | max_clusters == 0) {

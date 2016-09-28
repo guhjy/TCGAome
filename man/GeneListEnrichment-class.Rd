@@ -15,9 +15,6 @@ support to the usual multiple test adjustment methods.
 \describe{
 \item{\code{gene_list}}{The list of genes over which the enrichment is computed.}
 
-\item{\code{gene_annotations}}{The object GeneAnnotations to which the enrichment
-refers.}
-
 \item{\code{raw_enrichment}}{A data.frame with the enrichment results}
 }}
 

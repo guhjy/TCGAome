@@ -17,15 +17,14 @@ specific terms
 \section{Slots}{
 
 \describe{
-\item{\code{gene_list_enrichment}}{The object of class GeneListEnrichment that
-that contains the enrichment results}
-
 \item{\code{significance_threshold}}{The significance threshold applied to the enrichment
 results. The significance threshold is a fixed value, if you want to modify
 it you would need to create another object.}
 
 \item{\code{adj_method}}{The multiple test adjustment method. Methods supported are
 those supported by p.adjust()}
+
+\item{\code{max_clusters}}{The maximum number of clusters to evaluate (default: 10)}
 
 \item{\code{significant_results}}{A data.frame with the selected annotations terms
 after applying the multiple test correction and the significance threshold.}
@@ -34,5 +33,13 @@ after applying the multiple test correction and the significance threshold.}
 
 \item{\code{distance_matrix}}{The distance matrix between annotation terms by using
 the given distance_measure}
+
+\item{\code{explained_variance}}{The percentage of variance explained by each MDS
+component}
+
+\item{\code{explained_variance_repr}}{The percentage of variance explained by each
+MDS component computed only to cluster representatives}
+
+\item{\code{silhouette}}{The silhouette average width for each number of clusters}
 }}
 
