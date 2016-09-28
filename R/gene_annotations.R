@@ -698,18 +698,6 @@ setMethod("plot",
           c("x" = "GeneAnnotations"),
           function(x) {
 
-              #gene_dist = data.frame(
-              #    Gene = x@gene2term$Gene,
-              #    Associations = unlist(lapply(x@gene2term$Term, FUN = length)),
-              #    Class = "Gene"
-              #)
-
-              #term_dist = data.frame(
-              #    Term = x@term2gene$Term,
-              #    Associations = unlist(lapply(x@term2gene$Gene, FUN = length)),
-              #    Class = "Term"
-              #)
-
               gene_dist <- as.data.frame(
                   table(
                       unlist(lapply(x@gene2term$Term, FUN = length))),
@@ -728,46 +716,50 @@ setMethod("plot",
               annotation_dist$ngenes <- as.numeric(annotation_dist$ngenes)
               annotation_dist$nterms <- as.numeric(annotation_dist$nterms)
 
+              gene_dist <- data.frame(
+                  class = "gene",
+                  associations = unlist(lapply(x@gene2term$Term, FUN = length))
+              )
+              term_dist <- data.frame(
+                  class = "term",
+                  associations = unlist(lapply(x@term2gene$Gene, FUN = length))
+              )
+              annotation_dist2 <- rbind(gene_dist, term_dist)
+
               ## Plots gene associations
-              plot <- ggplot2::ggplot(data = annotation_dist,
+              mb <- as.numeric(1:10 %o% 10 ^ (0:4))
+              plot1 <- ggplot2::ggplot(data = annotation_dist,
                                       ggplot2::aes(x = nterms, y = ngenes)) +
-                  ggplot2::geom_point(ggplot2::aes(shape = class, color = class)) +
-                  ggplot2::scale_y_log10("# genes associated") +
-                  ggplot2::scale_x_log10("# terms associated")
+                  ggplot2::geom_point(ggplot2::aes(shape = class,
+                                                   color = class)) +
+                  ggplot2::scale_y_log10(
+                      breaks = c(1, 10, 100, 1000, 10000),
+                      minor_breaks = mb) +
+                  ggplot2::scale_x_log10(
+                      breaks = c(1, 10, 100, 1000, 10000),
+                      minor_breaks = mb) +
+                  ggplot2::scale_shape_manual(values=c(1, 2)) +
+                  ggplot2::labs(x = "# terms",
+                                y = "# genes",
+                                colour = NULL, shape = NULL,
+                                title = paste(x@name, "joint dist", sep = " - ")) +
+                  ggplot2::scale_color_brewer(
+                      palette = "Set1") +
+                  ggplot2::theme_bw()
 
+              plot2 <- ggplot2::ggplot(data = annotation_dist2,
+                                      ggplot2::aes(class, associations, colour = class)) +
+                  ggplot2::geom_violin() +
+                  ggplot2::scale_y_log10(
+                      breaks = c(1, 10, 100, 1000, 10000),
+                      minor_breaks = mb) +
+                  ggplot2::labs(x = NULL,
+                                y = "Associations",
+                                colour = NULL, shape = NULL,
+                                title = paste(x@name, "disjoint dist", sep = " - ")) +
+                  ggplot2::scale_color_brewer(
+                      palette = "Set1") +
+                  ggplot2::theme_bw()
 
-              ## Plots gene associations
-              #plot1 <- ggplot2::ggplot(
-              #    data = gene_dist,
-              #    ggplot2::aes(x = Associations)) +
-              #    ggplot2::geom_histogram( #ggplot2::aes(y=..density..),      # Histogram with density instead of count on y-axis
-              #                            bins=30,
-              #                            colour="black", fill="white") +
-              #    #ggplot2::geom_density(alpha=.2, fill="#FF6666") +  # Overlay with transparent density plot
-              #    ggplot2::geom_vline(ggplot2::aes(xintercept=mean(Associations, na.rm=T)),   # Ignore NA values for mean
-              #               color="red", linetype="dashed", size=1) +
-              #    ggplot2::scale_y_continuous("# genes") +
-              #    ggplot2::scale_x_continuous("# terms associated") +
-              #    ggplot2::theme_bw() +
-              #    ggplot2::ggtitle(paste(x@name, "genes", sep = " - "))
-
-
-              ## Plots gene associations
-              #plot2 <- ggplot2::ggplot(
-              #    data = term_dist,
-              #    ggplot2::aes(x = Associations)) +
-              #    ggplot2::geom_histogram( #ggplot2::aes(y=..density..),      # Histogram with density instead of count on y-axis
-              #                            bins=30,
-              #                            colour="black", fill="white") +
-              #    #ggplot2::geom_density(alpha=.2, fill="#FF6666") +  # Overlay with transparent density plot
-              #    ggplot2::geom_vline(ggplot2::aes(xintercept=mean(Associations, na.rm=T)),   # Ignore NA values for mean
-              #                        color="red", linetype="dashed", size=1, ) +
-              #    ggplot2::scale_y_continuous("# terms") +
-              #    ggplot2::scale_x_continuous("# genes associated") +
-              #    ggplot2::theme_bw() +
-              #    ggplot2::ggtitle(paste(x@name, "terms", sep = " - "))
-
-              #cowplot::plot_grid(plot1, plot2)
-              #
-              plot
+              cowplot::plot_grid(plot1, plot2, nrow = 2)
           })
