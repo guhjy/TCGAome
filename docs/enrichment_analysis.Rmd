@@ -1,13 +1,18 @@
 ---
-title: "Enrichment Analysis"
-author: "priesgo"
-date: "August 9, 2016"
-output: html_document
+title: "Enrichment Analysis & Dimensionality Reduction"
+author: "Pablo Riesgo"
+date: '`r Sys.Date()`'
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE, warning=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, collapse = TRUE, comment = "#>")
 devtools::load_all()
+#output: rmarkdown::html_vignette
+#vignette: >
+#  %\VignetteIndexEntry{Enrichment Analysis & Dimensionality Reduction}
+#  %\VignetteEngine{knitr::rmarkdown}
+#  %\VignetteEncoding{UTF-8}
 ```
 
 ## Using Object Oriented (OO) programming
@@ -20,23 +25,41 @@ Using OO allows achieving **high cohesion** and **low coupling**, which facilita
 
 This model allows us to support multiple annotations for enrichment. So far the supported annotations based on AnnotationDbi data source and some custom resources are:
 
-* Gene Ontology (from org.Hs.eg.db)
+* Gene Ontology: biological process, molecular function and cell component (from org.Hs.eg.db)
 * KEGG pathways (from org.Hs.eg.db)
 * OMIM diseases (from org.Hs.eg.db)
 * HPO phenotypes (from http://compbio.charite.de/jenkins/job/hpo.annotations.monthly/lastStableBuild/artifact/annotation/ALL_SOURCES_TYPICAL_FEATURES_phenotype_to_genes.txt)
 
 These annotations can be loaded as follows:
-```{r, eval=FALSE}
-goa <- TCGAome::load_goa()
+```{r, warning=FALSE, message=FALSE}
+goa_bp <- TCGAome::load_goa(ontology = "BP")
+goa_mf <- TCGAome::load_goa(ontology = "MF")
+goa_cc <- TCGAome::load_goa(ontology = "CC")
 kegg <- TCGAome::load_kegg()
 omim <- TCGAome::load_omim()
 hpo <- TCGAome::load_hpo()
 ```
 
-The object created contains the following information:
+The S4 object created contains the following slots:
 ```{r, warning=FALSE, message=FALSE}
-kegg <- TCGAome::load_kegg()
-str(kegg, list.len = 5, vec.len = 5)
+str(goa_bp, list.len = 5, vec.len = 5)
+```
+
+
+**TODO: add a print function to annotations object**
+
+
+### Distribution of annotations
+
+We can visually explore the distribution of annotations and explore the differences between genes and terms for the different resources.
+
+```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+plot(goa_bp)
+plot(goa_mf)
+plot(goa_cc)
+plot(kegg)
+plot(omim)
+plot(hpo)
 ```
 
 ### Metrics
@@ -44,19 +67,19 @@ str(kegg, list.len = 5, vec.len = 5)
 For any term within the **TCGAome::GeneAnnotations** object we can obtain its **relative frequency** of annotation, which might be useful to compute the **Information Content** within a term.
 
 ```{r, warning=FALSE, message=FALSE}
-random_kegg_term = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
-random_kegg_term
-TCGAome::get_term_freq(kegg, random_kegg_term) 
+random_term = goa_bp@term2gene$Term[runif(1, max = length(goa_bp@term2gene$Term))]
+random_term
+TCGAome::get_term_freq(goa_bp, random_term) 
 ```
 
 For any two terms within the GeneAnnotations object we can obtain its **functional similarity** based on the binary distances implemented in TCGAome.
 
 ```{r, warning=FALSE, message=FALSE}
-random_kegg_term1 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
-random_kegg_term2 = kegg@term2gene$Term[runif(1, max = length(kegg@term2gene$Term))]
-random_kegg_term1
-random_kegg_term2
-TCGAome::get_functional_similarity(kegg, random_kegg_term1, random_kegg_term2, distance_measure = "UI")
+random_term1 = goa_bp@term2gene$Term[runif(1, max = length(goa_bp@term2gene$Term))]
+random_term2 = goa_bp@term2gene$Term[runif(1, max = length(goa_bp@term2gene$Term))]
+random_term1
+random_term2
+TCGAome::get_functional_similarity(goa_bp, random_term1, random_term2, distance_measure = "cosine")
 ```
 
 The supported binary distances are: UI, cosine, Bray-Curtis and binary.
@@ -72,7 +95,7 @@ cols <- c("PATH")
 kegg_raw <- AnnotationDbi::select(org.Hs.eg.db::org.Hs.eg.db, keys=uniKeys, columns=cols, keytype="SYMBOL")
 kegg_raw <- kegg_raw[, c(1, 2)]
 colnames(kegg_raw) <- c("Gene", "Term")
-kegg <- GeneAnnotations(raw_annotations = kegg_raw, name="KEGG-Human")
+kegg <- TCGAome::GeneAnnotations(raw_annotations = kegg_raw, name="KEGG-Human")
 ```
 
 
@@ -91,20 +114,25 @@ gene_list <- c("ZNF638", "HNRNPU", "PPIAL4G", "RAPH1", "USP7", "SUMO1P3",
           "CDH3", "SMAD4", "CASP7", "GMPS", "NDC80", "EZH2", "MELK", "CDC45",
           "CRY2", "KLHDC1", "MEIS3P1", "FBXL5", "EHD2", "CCNB1", "GSK3A",
           "DVL3", "NFKB1", "COL6A1", "CCND1", "BAK1")
-kegg_enrichment <- TCGAome::get_enrichment(kegg, gene_list = gene_list)
-str(kegg_enrichment, list.len = 5, vec.len = 5)
+goa_bp_enrichment <- TCGAome::get_enrichment(goa_bp, gene_list = gene_list)
+str(goa_bp_enrichment, list.len = 5, vec.len = 5)
 ```
 
 Or alternatively:
 ```{r, eval=FALSE}
-kegg_enrichment <- GeneListEnrichment(gene_annotations = kegg, gene_list = gene_list)
+goa_bp_enrichment <- TCGAome::GeneListEnrichment(gene_annotations = goa_bp, gene_list = gene_list)
 ```
 
 And extract significant results:
 
 ```{r, warning=FALSE, message=FALSE}
-TCGAome::get_significant_results(kegg_enrichment, significance_thr = 0.05, adj_method = "none")
+head(TCGAome::get_significant_results(goa_bp_enrichment, significance_thr = 0.05, adj_method = "none"))
 ```
+
+
+**TODO: visualize enrichment results**
+
+**TODO: add a print function to enrichment object**
 
 
 ## Visualizing enrichment results (clustering + MDS)
@@ -114,22 +142,172 @@ To visualize enriched terms we use a dimensionality reduction approach based on 
 Tu run this pipeline we need to create an object of type "TermsClustering" as follows:
 
 ```{r, warning=FALSE, message=FALSE}
-kegg_term_clustering <- TermsClustering(kegg_enrichment, "UI", significance_thr = 0.05, adj_method = "none")
-str(kegg_term_clustering@distance_matrix, vec.len = 5)
-str(kegg_term_clustering@significant_results, vec.len = 5)
+goa_bp_term_clustering <- TCGAome::TermsClustering(goa_bp, goa_bp_enrichment, distance_measure = "cosine", significance_thr = 0.05, adj_method = "none", max_clusters = 10)
+str(goa_bp_term_clustering@distance_matrix, list.len = 5, vec.len = 5)
+str(goa_bp_term_clustering@significant_results, list.len = 5, vec.len = 5)
 ```
 
 Or alternatively:
 ```{r, warning=FALSE, message=FALSE, eval=FALSE}
-kegg_term_clustering <- get_terms_clustering(kegg_enrichment, "UI", significance_thr = 0.05, adj_method = "none")
+goa_bp_term_clustering <- TCGAome::get_terms_clustering(goa_bp_enrichment, goa_bp, distance_measure = "cosine", significance_thr = 0.05, adj_method = "none", max_clusters = 10)
 ```
 
+The clustering is performed based on a similarity metric between terms. The supported similarity metrics are based on the genes annotated to each term. As genes are functional elements we called it functional similarity. We support so far several metrics based on binary vector distances, every term is associated to a binary vector with the length of the total number of genes that our term annotations contain. Each position in the vector contains 1 or 0 if the given term is annotated with that gene or not. So far, we support a number of binary distances: Union-Intersection (UI), cosine, Bray-Curtis and binary.
+
+To decide the optimal number of clusters we perform a silhouette analysis. We use by default a maximum of clusters of 10 as otherwise results become quickly complex, this can be changed using parameter _max_clusters_.
+
+Evaluate the optimal number of clusters with silhouette analysis:
 
 ```{r, warning=FALSE, message=FALSE}
-plot(kegg_term_clustering@significant_results$x, 
-     kegg_term_clustering@significant_results$y, 
-     col = kegg_term_clustering@significant_results$Cluster, 
-     cex = log(kegg_term_clustering@significant_results$Freq * 100), 
-     pch=20)
+TCGAome::plot_silhouette_analysis(goa_bp_term_clustering)
 ```
 
+We perform a PAM clustering with the obtained optimal number of clusters and select a term representative for each of the clusters. The criteria to select the term representative is as follows: for each cluster if there is any term with a frequency of annotation below a given threshold select the term with the lowest enrichment p-value; otherwise select the term with the lowest p-value across all terms independently of their frequency of annotation.
+
+Also based on the similarity metrics between terms we can perform a Multidimensional Scaling to plot our clusters in a reduced number of dimensions. We have two alternatives: perform the MDS on every significant term that was clustered or perform it just on the subset of cluster representatives. To evaluate the MDS we need to inspect the explained variance by the first 3 components, which are the ones we will be visualizing.
+
+```{r, warning=FALSE, message=FALSE}
+TCGAome::plot_explained_variance(goa_bp_term_clustering)
+```
+
+Finally plot the results of the clustering and MDS.
+
+```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+TCGAome::plot_mds(goa_bp_term_clustering, all = TRUE)
+```
+
+As this scatter plot might quickly get very noisy you may plot only the representative terms for each cluster in the MDS performed over the subset of cluster representatives.
+
+```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
+TCGAome::plot_mds(goa_bp_term_clustering, all = FALSE)
+```
+
+We can do the same for other annotation resources.
+```{r, warning=FALSE, message=FALSE, results = "hide", fig.width=7, fig.height=6}
+goa_mf_enrichment <- TCGAome::get_enrichment(goa_mf, gene_list = gene_list)
+goa_mf_term_clustering <- TCGAome::TermsClustering(goa_mf, goa_mf_enrichment, distance_measure = "cosine", significance_thr = 0.05, adj_method = "none", max_clusters = 10)
+TCGAome::plot_mds(goa_mf_term_clustering, all = TRUE)
+```
+
+```{r, warning=FALSE, message=FALSE, results = "hide", fig.width=7, fig.height=6}
+goa_cc_enrichment <- TCGAome::get_enrichment(goa_cc, gene_list = gene_list)
+goa_cc_term_clustering <- TCGAome::TermsClustering(goa_cc, goa_cc_enrichment, distance_measure = "cosine", significance_thr = 0.05, adj_method = "none", max_clusters = 10)
+TCGAome::plot_mds(goa_cc_term_clustering, all = TRUE)
+```
+
+```{r, warning=FALSE, message=FALSE, results = "hide", fig.width=7, fig.height=6}
+kegg_enrichment <- TCGAome::get_enrichment(kegg, gene_list = gene_list)
+kegg_term_clustering <- TCGAome::TermsClustering(kegg, kegg_enrichment, distance_measure = "cosine", significance_thr = 0.05, adj_method = "none", max_clusters = 10)
+TCGAome::plot_mds(kegg_term_clustering, all = TRUE)
+```
+
+```{r, warning=FALSE, message=FALSE, results = "hide", fig.width=7, fig.height=6}
+hpo_enrichment <- TCGAome::get_enrichment(hpo, gene_list = gene_list)
+hpo_term_clustering <- TCGAome::TermsClustering(hpo, hpo_enrichment, distance_measure = "cosine", significance_thr = 0.05, adj_method = "none", max_clusters = 10)
+TCGAome::plot_mds(hpo_term_clustering, all = TRUE)
+```
+
+```{r, warning=FALSE, message=FALSE, results = "hide", fig.width=7, fig.height=6}
+omim_enrichment <- TCGAome::get_enrichment(omim, gene_list = gene_list)
+omim_term_clustering <- TCGAome::TermsClustering(omim, omim_enrichment, distance_measure = "cosine", significance_thr = 0.05, adj_method = "none", max_clusters = 10)
+TCGAome::plot_mds(omim_term_clustering, all = TRUE)
+```
+
+
+## Evaluating the different similarity metrics
+
+The similarity metric employed for clustering and MDS affects how terms are grouped. It is important to assess how well a given similarity metric explains the variance in our annotation terms in the first components of the MDS that will be used to plot our results. This analysis is specific for every annotation and enrichment results, no magic recipe that can be reused.
+
+First thing is to evaluate the explained variance in our MDS space by using each of the similarity metrics.
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE, results = "hide", fig.width=7, fig.height=6}
+goa_bp_term_clustering_cosine <- TCGAome::TermsClustering(goa_bp, goa_bp_enrichment, distance_measure = "cosine", significance_thr = 0.05, adj_method = "none", max_clusters = 20)
+goa_bp_term_clustering_ui <- TCGAome::TermsClustering(goa_bp, goa_bp_enrichment, distance_measure = "UI", significance_thr = 0.05, adj_method = "none", max_clusters = 20)
+goa_bp_term_clustering_bray <- TCGAome::TermsClustering(goa_bp, goa_bp_enrichment, distance_measure = "bray-curtis", significance_thr = 0.05, adj_method = "none", max_clusters = 20)
+goa_bp_term_clustering_binary <- TCGAome::TermsClustering(goa_bp, goa_bp_enrichment, distance_measure = "binary", significance_thr = 0.05, adj_method = "none", max_clusters = 20)
+
+explained_variance_cosine <- goa_bp_term_clustering_cosine@explained_variance
+explained_variance_ui <- goa_bp_term_clustering_ui@explained_variance
+explained_variance_bray <- goa_bp_term_clustering_bray@explained_variance
+explained_variance_binary <- goa_bp_term_clustering_binary@explained_variance
+explained_variance_repr_cosine <- goa_bp_term_clustering_cosine@explained_variance_repr
+explained_variance_repr_ui <- goa_bp_term_clustering_ui@explained_variance_repr
+explained_variance_repr_bray <- goa_bp_term_clustering_bray@explained_variance_repr
+explained_variance_repr_binary <- goa_bp_term_clustering_binary@explained_variance_repr
+
+explained_variance <- rbind(
+    cbind(set = "all",
+          metric = "cosine", 
+          explained_variance_cosine[explained_variance_cosine$component <= 10, ]),
+    cbind(set = "all",
+          metric = "UI", 
+          explained_variance_ui[explained_variance_ui$component <= 10, ]),
+    cbind(set = "all",
+          metric = "Bray-Curtis", 
+          explained_variance_bray[explained_variance_bray$component <= 10, ]),
+    cbind(set = "all",
+          metric = "binary", 
+          explained_variance_binary[explained_variance_binary$component <= 10, ]),
+    cbind(set = "representatives",
+          metric = "cosine", 
+          explained_variance_repr_cosine[explained_variance_repr_cosine$component <= 10, ]),
+    cbind(set = "representatives",
+          metric = "UI", 
+          explained_variance_repr_ui[explained_variance_repr_ui$component <= 10, ]),
+    cbind(set = "representatives",
+          metric = "Bray-Curtis", 
+          explained_variance_repr_bray[explained_variance_repr_bray$component <= 10, ]),
+    cbind(set = "representatives",
+          metric = "binary", 
+          explained_variance_repr_binary[explained_variance_repr_binary$component <= 10, ])
+)
+
+ggplot2::ggplot(
+    data = explained_variance,
+    ggplot2::aes(x = component, y = explained_variance, colour = metric, linetype = set)) +
+    ggplot2::geom_point(
+        shape = I(16),
+        size = 3) +
+    ggplot2::geom_line(size = 0.2) +
+    ggplot2::scale_x_continuous(
+        breaks=unique(explained_variance$component)) +
+    ggplot2::scale_y_continuous(label = scales::percent) +
+    ggplot2::labs(y = "Explained variance", x = "Component") +
+    ggplot2::theme_bw()
+
+```
+
+It is also important to assess how the similarity metric affects the optimal number of clusters.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, results = "hide", fig.width=7, fig.height=6}
+silhouette_cosine <- goa_bp_term_clustering_cosine@silhouette
+silhouette_ui <- goa_bp_term_clustering_ui@silhouette
+silhouette_bray <- goa_bp_term_clustering_bray@silhouette
+silhouette_binary <- goa_bp_term_clustering_binary@silhouette
+
+silhouette <- rbind(
+    cbind(metric = "cosine", 
+          silhouette_cosine),
+    cbind(metric = "UI", 
+          silhouette_ui),
+    cbind(metric = "Bray-Curtis", 
+          silhouette_bray),
+    cbind(metric = "binary", 
+          silhouette_binary)
+)
+
+ggplot2::ggplot(
+    data = silhouette,
+    ggplot2::aes(x = k, y = avg_width, colour = metric)) +
+    ggplot2::geom_line(
+        size = 0.2,
+        linetype = 2) +
+    ggplot2::geom_point(
+      shape = I(16),
+      size = 3) +
+    ggplot2::scale_x_continuous(
+      breaks=unique(silhouette$k)) +
+    ggplot2::scale_y_continuous() +
+    ggplot2::labs(y = "Average silhouette width", x = "Number of clusters") +
+    ggplot2::theme_bw()
+```
