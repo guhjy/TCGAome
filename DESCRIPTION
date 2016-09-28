@@ -56,7 +56,6 @@ Collate:
     'gene_annotations.R'
     'gene_list_enrichment.R'
     'go_inspector.r'
-    'goa_enrichment.r'
     'multivariate_analysis.R'
     'pipeline.r'
     'plots.r'
