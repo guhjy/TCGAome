@@ -51,7 +51,6 @@ GeneListEnrichment <- function(...) new("GeneListEnrichment",...)
 
 ## Computes the enrichment with the Fisher test for every term
 .compute_enrichment <- function(gene_list, gene_annotations) {
-    require(fastmatch)
     all_genes <- gene_annotations@gene2term$Gene
     all_terms <- gene_annotations@term2gene$Term
     pvalues <- as.double(
