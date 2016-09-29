@@ -56,27 +56,52 @@ GeneListEnrichment <- function(...) new("GeneListEnrichment",...)
 .compute_enrichment <- function(gene_list, gene_annotations) {
     all_genes <- gene_annotations@gene2term$Gene
     all_terms <- gene_annotations@term2gene$Term
-    pvalues <- as.double(
-        vapply(all_terms,
-               FUN = function(term) {
-                   associated_genes = as.character(unlist(
-                       gene_annotations@term2gene[term, ]$Gene))
-                   intersection_genes <- gene_list[!is.na(fmatch(gene_list, associated_genes))]
-                   union_genes <- c(gene_list, associated_genes[is.na(fmatch(associated_genes, gene_list))])
-                   fisher.test(matrix(c(
+    enrichment <-
+        do.call(
+            rbind,
+            lapply(
+                all_terms,
+                FUN = function(term) {
+                    associated_genes = as.character(unlist(
+                        gene_annotations@term2gene[term, ]$Gene))
+                   intersection_genes <- gene_list[
+                       !is.na(fmatch(gene_list, associated_genes))]
+                   union_genes <- c(
+                       gene_list,
+                       associated_genes[
+                           is.na(fmatch(associated_genes, gene_list))])
+                   c(Term = term,
+                     Expected =
+                         (length(associated_genes) / length(all_genes)) *
+                         length(gene_list),
+                     Observed = length(intersection_genes),
+                     fisher.test(matrix(c(
                        # intersection between gene_list and associated_genes
                        length(intersection_genes),
                        # associated_genes not in gene_list
-                       length(associated_genes [is.na(fmatch(associated_genes, intersection_genes))]),
+                       length(associated_genes [
+                           is.na(fmatch(associated_genes,
+                                        intersection_genes))]),
                        # gene_list not in associated_genes
-                       length(gene_list [is.na(fmatch(gene_list, intersection_genes))]),
+                       length(gene_list [
+                           is.na(fmatch(gene_list,
+                                        intersection_genes))]),
                        # genes not in associated_genes and not in gene_list
-                       length(all_genes [is.na(fmatch(all_genes, union_genes))])
+                       length(all_genes [
+                           is.na(fmatch(all_genes,
+                                        union_genes))])
                     ), nrow = 2, ncol = 2),
-                    alternative = "greater")$p.value
-                },
-               FUN.VALUE = numeric(1)))
-    return(pvalues)
+                    alternative = "greater")[
+                        c("p.value", "estimate", "null.value")])
+                }))
+    # unlists every column
+    enrichment <- apply(enrichment, MARGIN = 2, FUN = unlist)
+    # converts to float only numeric columns
+    enrichment <- apply(enrichment[, 2:dim(enrichment)[2]],
+                        MARGIN = 2,
+                        FUN = as.double)
+    enrichment <- as.data.frame(enrichment)
+    return(enrichment)
 }
 
 setMethod("initialize",
@@ -100,8 +125,11 @@ setMethod("initialize",
 
               ## Computes enrichment
               futile.logger::flog.info("Computing Fisher test enrichment on the gene list...")
-              pvalues <- .compute_enrichment(.Object@gene_list, gene_annotations)
-              futile.logger::flog.info("Most significant p-value %s and less significant %s", min(pvalues), max(pvalues))
+              enrichment <- .compute_enrichment(.Object@gene_list, gene_annotations)
+              futile.logger::flog.info(
+                  "Most significant p-value %s and less significant %s",
+                  round(min(enrichment$p.value), digits = 3),
+                  round(max(enrichment$p.value), digits = 3))
 
               ## Computes the relative frequency of every term
               #freqs <- as.double(sapply(all_terms, function(term){
@@ -109,10 +137,7 @@ setMethod("initialize",
               #}))
               ## Builds results data.frame
               all_terms <- gene_annotations@term2gene$Term
-              .Object@raw_enrichment <- data.frame(
-                  Term = all_terms,
-                  pvalue = pvalues,
-                  row.names = NULL, stringsAsFactors = F)
+              .Object@raw_enrichment <- enrichment
 
               return(.Object)
           })
@@ -150,7 +175,7 @@ setMethod("get_significant_results",
               if (! adj_method %in% p.adjust.methods) {
                   stop(paste("Non supported p-value adjustment method: '", adj_method, "'", sep=""))
               }
-              x@raw_enrichment$adj_pvalue <- p.adjust(x@raw_enrichment$pvalue, method = adj_method)
+              x@raw_enrichment$adj_pvalue <- p.adjust(x@raw_enrichment$p.value, method = adj_method)
               return(x@raw_enrichment[x@raw_enrichment$adj_pvalue <= significance_threshold, ])
           })
 
@@ -228,13 +253,13 @@ setMethod("print",
                         "' using the Fisher's exact test on a gene list of length ",
                         length(x@gene_list), "\n", sep = ""))
               cat(paste("Number of terms enriched with a raw p-value < 0.001: ",
-                        length(x@raw_enrichment[x@raw_enrichment$pvalue < 0.001, ]$pvalue),
+                        length(x@raw_enrichment[x@raw_enrichment$p.value < 0.001, ]$p.value),
                         "\n", sep = ""))
               cat(paste("Number of terms enriched with a raw p-value < 0.01: ",
-                        length(x@raw_enrichment[x@raw_enrichment$pvalue < 0.01, ]$pvalue),
+                        length(x@raw_enrichment[x@raw_enrichment$p.value < 0.01, ]$p.value),
                         "\n", sep = ""))
               cat(paste("Number of terms enriched with a raw p-value < 0.05: ",
-                        length(x@raw_enrichment[x@raw_enrichment$pvalue < 0.05, ]$pvalue),
+                        length(x@raw_enrichment[x@raw_enrichment$p.value < 0.05, ]$p.value),
                         "\n", sep = ""))
           })
 
