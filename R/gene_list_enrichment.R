@@ -8,6 +8,8 @@ NULL
 #' The enrichment calculated is based on the Fisher exact test and we give
 #' support to the usual multiple test adjustment methods.
 #'
+#' @slot annotations_name The name of the annotations on which the enrichments
+#' is computed
 #' @slot gene_list The list of genes over which the enrichment is computed.
 #' @slot raw_enrichment A data.frame with the enrichment results
 #'
@@ -15,7 +17,8 @@ NULL
 #' @import fastmatch
 #'
 setClass("GeneListEnrichment",
-         representation(gene_list = "character",
+         representation(annotations_name = "character",
+                        gene_list = "character",
                         raw_enrichment = "data.frame"),
          prototype(
              gene_list = c(),
@@ -81,6 +84,8 @@ setMethod("initialize",
           function(.Object, gene_list, gene_annotations){
               ## Initialize input data
               futile.logger::flog.info("Initializing GeneListEnrichment...")
+              .Object@annotations_name <- gene_annotations@name
+              futile.logger::flog.info("Enrichment calculated on : %s", .Object@annotations_name)
               .Object@gene_list <- gene_list
               futile.logger::flog.info("Input gene list is of length : %d", length(.Object@gene_list))
 
@@ -195,5 +200,41 @@ setMethod("get_terms_clustering", c("x" = "GeneListEnrichment",
                   adj_method = adj_method,
                   max_clusters = max_clusters)
               )
+          })
+
+#' print()
+#'
+#' Prints the gene list enrichment
+#'
+#' @param x The GeneListEnrichment class on which the method will run.
+
+#' @return The printed version of the object
+#'
+#' @export
+#'
+#' @examples
+#' TCGAome::print(hpo_enrichment)
+setGeneric("print",
+           signature = c("x"),
+           function(x) standardGeneric("print"))
+
+#' @aliases print
+#' @export
+setMethod("print",
+          c("x" = "GeneListEnrichment"),
+          function(x) {
+              cat(paste("Enrichement calculated on '",
+                        x@annotations_name,
+                        "' using the Fisher's exact test on a gene list of length ",
+                        length(x@gene_list), "\n", sep = ""))
+              cat(paste("Number of terms enriched with a raw p-value < 0.001: ",
+                        length(x@raw_enrichment[x@raw_enrichment$pvalue < 0.001, ]$pvalue),
+                        "\n", sep = ""))
+              cat(paste("Number of terms enriched with a raw p-value < 0.01: ",
+                        length(x@raw_enrichment[x@raw_enrichment$pvalue < 0.01, ]$pvalue),
+                        "\n", sep = ""))
+              cat(paste("Number of terms enriched with a raw p-value < 0.05: ",
+                        length(x@raw_enrichment[x@raw_enrichment$pvalue < 0.05, ]$pvalue),
+                        "\n", sep = ""))
           })
 

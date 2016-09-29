@@ -156,12 +156,16 @@ gene_list <- c("ZNF638", "HNRNPU", "PPIAL4G", "RAPH1", "USP7", "SUMO1P3",
           "CRY2", "KLHDC1", "MEIS3P1", "FBXL5", "EHD2", "CCNB1", "GSK3A",
           "DVL3", "NFKB1", "COL6A1", "CCND1", "BAK1")
 goa_bp_enrichment <- TCGAome::get_enrichment(goa_bp, gene_list = gene_list)
-str(goa_bp_enrichment, list.len = 5, vec.len = 5)
 ```
 
 Or alternatively:
 ```{r, eval=FALSE}
 goa_bp_enrichment <- TCGAome::GeneListEnrichment(gene_annotations = goa_bp, gene_list = gene_list)
+```
+
+Explore results:
+```{r, warning=FALSE}
+print(goa_bp_enrichment)
 ```
 
 And extract significant results:
@@ -184,8 +188,7 @@ Tu run this pipeline we need to create an object of type "TermsClustering" as fo
 
 ```{r, warning=FALSE, message=FALSE}
 goa_bp_term_clustering <- TCGAome::TermsClustering(goa_bp, goa_bp_enrichment, distance_measure = "cosine", significance_thr = 0.05, adj_method = "none", max_clusters = 10)
-str(goa_bp_term_clustering@distance_matrix, list.len = 5, vec.len = 5)
-str(goa_bp_term_clustering@significant_results, list.len = 5, vec.len = 5)
+print(goa_bp_term_clustering)
 ```
 
 Or alternatively:

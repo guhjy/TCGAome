@@ -872,43 +872,46 @@ setGeneric("print",
 setMethod("print",
           c("x" = "GeneAnnotations"),
           function(x) {
-              cat(paste("'", x@name, "'", " object of class ", class(x), "\n", sep = ""))
-              cat(paste("Number of genes: ", length(x@gene2term$Gene), "\n"))
-              cat(paste("Number of terms: ", length(x@term2gene$Term), "\n"))
+              cat(paste("'", x@name, "'", " object of class ", class(x), "\n",
+                        sep = ""))
+              cat(paste("Number of genes: ", length(x@gene2term$Gene), "\n",
+                        sep = ""))
+              cat(paste("Number of terms: ", length(x@term2gene$Term), "\n",
+                        sep = ""))
               cat("Number of terms associated to a gene\n")
 
               cat(paste("\tAverage: ",
                         round(mean(sapply(x@gene2term$Term, FUN=length)),
                               digits = 2),
-                        "\n"))
+                        "\n", sep = ""))
               cat(paste("\tStandard deviation: ",
                         round(sd(sapply(x@gene2term$Term, FUN=length)),
                               digits = 2),
-                        "\n"))
+                        "\n", sep = ""))
               cat(paste("\tQuantiles ",
                         names(quantile(sapply(x@gene2term$Term, FUN=length))),
                         ": ",
                         quantile(sapply(x@gene2term$Term, FUN=length)),
-                        "\n"))
+                        "\n", sep = ""))
               cat(paste("\tMaximum: ",
                         max(sapply(x@gene2term$Term,
-                                   FUN=length)), "\n"))
+                                   FUN=length)), "\n", sep = ""))
 
               cat("Number of genes associated to a term\n")
               cat(paste("\tAverage: ",
                         round(mean(sapply(x@term2gene$Gene, FUN=length)),
                               digits = 2),
-                        "\n"))
+                        "\n", sep = ""))
               cat(paste("\tStandard deviation: ",
                         round(sd(sapply(x@term2gene$Gene, FUN=length)),
                               digits = 2),
-                        "\n"))
+                        "\n", sep = ""))
               cat(paste("\tQuantiles ",
                         names(quantile(sapply(x@term2gene$Gene, FUN=length))),
                         ": ",
                         quantile(sapply(x@term2gene$Gene, FUN=length)),
-                        "\n"))
+                        "\n", sep = ""))
               cat(paste("\tMaximum: ",
                         max(sapply(x@term2gene$Gene,
-                                   FUN=length)), "\n"))
+                                   FUN=length)), "\n", sep = ""))
           })

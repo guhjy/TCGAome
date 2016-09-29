@@ -12,7 +12,8 @@ NULL
 #' and the frequency of annotation of the term to give priority to the most
 #' specific terms
 #' (3) the MultiDimensional Scaling (MDS) results on the cluster representatives
-#'
+#' @slot annotations_name The name of the annotations on which the enrichments
+#' is computed
 #' @slot significance_threshold The significance threshold applied to the enrichment
 #' results. The significance threshold is a fixed value, if you want to modify
 #' it you would need to create another object.
@@ -34,7 +35,8 @@ NULL
 #' @import cluster
 #'
 setClass("TermsClustering",
-         representation(distance_measure = "character",
+         representation(annotations_name = "character",
+                        distance_measure = "character",
                         significance_threshold = "numeric",
                         adj_method = "character",
                         max_clusters = "numeric",
@@ -215,25 +217,42 @@ TermsClustering <- function(...) new("TermsClustering",...)
 
 setMethod("initialize",
           signature(.Object = "TermsClustering"),
-          function(.Object, gene_annotations, gene_list_enrichment, distance_measure,
-                   significance_threshold, adj_method, max_clusters){
+          function(.Object,
+                   gene_annotations,
+                   gene_list_enrichment,
+                   distance_measure,
+                   significance_threshold,
+                   adj_method,
+                   max_clusters){
 
               ## Initialize input data
               futile.logger::flog.info("Initializing TermsClustering...")
+              .Object@annotations_name <- gene_annotations@name
               .Object@distance_measure <- distance_measure
               .Object@significance_threshold <- significance_threshold
               .Object@adj_method <- adj_method
-              futile.logger::flog.info("Distance metric : %s", .Object@distance_measure)
-              futile.logger::flog.info("Significance threshold : %s", .Object@significance_threshold)
+              futile.logger::flog.info(
+                  "Annotations name : %s",
+                  .Object@annotations_name)
+              futile.logger::flog.info(
+                  "Distance metric : %s",
+                  .Object@distance_measure)
+              futile.logger::flog.info(
+                  "Significance threshold : %s",
+                  .Object@significance_threshold)
 
               ## Gets only significant enrichment results
-              futile.logger::flog.info("Getting significantly enriched terms...")
+              futile.logger::flog.info(
+                  "Getting significantly enriched terms...")
               .Object@significant_results <- TCGAome::get_significant_results(
                   gene_list_enrichment, significance_threshold, adj_method)
-              futile.logger::flog.info("# of significant terms : %s", nrow(.Object@significant_results))
+              futile.logger::flog.info(
+                  "# of significant terms : %s",
+                  nrow(.Object@significant_results))
 
               ## Computes distance matrix
-              futile.logger::flog.info("Getting distance matrix for the signifcant terms...")
+              futile.logger::flog.info(
+                  "Getting distance matrix for the signifcant terms...")
               .Object@distance_matrix <- TCGAome::get_term_distance_matrix(
                   gene_annotations, distance_measure,
                   terms_subset = .Object@significant_results$Term)
@@ -245,7 +264,9 @@ setMethod("initialize",
               futile.logger::flog.info("Object is valid!")
 
               ## Computes clustering
-              futile.logger::flog.info("Clustering significant terms with max clusters = %d ...", max_clusters)
+              futile.logger::flog.info(
+                  "Clustering significant terms with max clusters = %d ...",
+                  max_clusters)
               clusters <- TCGAome::.pam_clustering(
                   .Object@distance_matrix,
                   max_clusters = max_clusters)
@@ -254,10 +275,13 @@ setMethod("initialize",
                   clusters$clustering,
                   by = "Term")
               .Object@silhouette <- clusters$silhouette
-              futile.logger::flog.info("Found %d clusters", length(unique(clusters$clustering$Cluster)))
+              futile.logger::flog.info(
+                  "Found %d clusters",
+                  length(unique(clusters$clustering$Cluster)))
 
               ## Computes MDS
-              futile.logger::flog.info("Computing MDS on the significant terms...")
+              futile.logger::flog.info(
+                  "Computing MDS on the significant terms...")
               mds <- TCGAome::.multidimensional_scaling(
                   .Object@distance_matrix)
               .Object@significant_results <- merge(
@@ -268,7 +292,8 @@ setMethod("initialize",
               futile.logger::flog.info("MDS done")
 
               ## Retrieves the frequency of annotation
-              futile.logger::flog.info("Computing the annotation frequency of significant terms...")
+              futile.logger::flog.info(
+                  "Computing the annotation frequency of significant terms...")
               .Object@significant_results$Freq <- vapply(
                   .Object@significant_results$Term,
                   FUN = function(term) {
@@ -280,7 +305,8 @@ setMethod("initialize",
               futile.logger::flog.info("Done")
 
               ## Select the representative term for every cluster
-              futile.logger::flog.info("Select representative terms for clusters...")
+              futile.logger::flog.info(
+                  "Select representative terms for clusters...")
               representatives <- TCGAome::.select_representatives(
                   .Object@significant_results)
               .Object@significant_results <- merge(
@@ -290,7 +316,8 @@ setMethod("initialize",
               futile.logger::flog.info("Done")
 
               # Compute MDS again just on representatives
-              futile.logger::flog.info("Compute MDS again on cluster representatives...")
+              futile.logger::flog.info(
+                  "Compute MDS again on cluster representatives...")
               distance_matrix_repr <- as.dist(as.matrix(
                   .Object@distance_matrix)[
                       unlist(representatives$repr_term),
@@ -348,8 +375,10 @@ setMethod("initialize",
                ifelse(Freq <= 0.1, 2, 3)))
 
     ## Prepares term datasets
-    representatives_data <- significant_results[significant_results$Term == significant_results$repr_term, ]
-    others_data <- significant_results[significant_results$Term != significant_results$repr_term, ]
+    representatives_data <- significant_results[
+        significant_results$Term == significant_results$repr_term, ]
+    others_data <- significant_results[
+        significant_results$Term != significant_results$repr_term, ]
 
     my_palette <- colorRampPalette(RColorBrewer::brewer.pal(
         3,
@@ -660,3 +689,73 @@ setMethod("plot_silhouette_analysis",
 
               plot
           })
+
+
+#' print()
+#'
+#' Prints the terms clustering
+#'
+#' @param x The TermsClustering class on which the method will run.
+
+#' @return The printed version of the object
+#'
+#' @export
+#'
+#' @examples
+#' TCGAome::print(hpo_terms_clustering)
+setGeneric("print",
+           signature = c("x"),
+           function(x) standardGeneric("print"))
+
+#' @aliases print
+#' @export
+setMethod("print",
+          c("x" = "TermsClustering"),
+          function(x) {
+              cat(paste("Terms clustering calculated on '",
+                        x@annotations_name,
+                        "' using as parameters:",
+                        "\n", sep = ""))
+              cat(paste("\tDistance measure: ",
+                        x@distance_measure,
+                        "\n", sep = ""))
+              cat(paste("\tSignificance threshold: ",
+                        x@significance_threshold,
+                        "\n", sep = ""))
+              cat(paste("\tMultiple test correction method: ",
+                        x@adj_method,
+                        "\n", sep = ""))
+              cat(paste("\tMaximum number of clusters: ",
+                        x@max_clusters,
+                        "\n", sep = ""))
+
+              cat(paste("Results:",
+                        "\n", sep = ""))
+              cat(paste("\tSignificant terms: ",
+                        length(unique(x@significant_results$Term)),
+                        "\n", sep = ""))
+              cat(paste("\tNumber of clusters: ",
+                        length(unique(x@significant_results$Cluster)),
+                        "\n", sep = ""))
+              cat(paste("\tMDS explained variance: ",
+                        "\n", sep = ""))
+              components2show <- min(5, length(x@explained_variance$component))
+              cat(paste("\t\tComponent ",
+                        x@explained_variance$component[
+                            1:components2show],
+                        ": ",
+                        round(x@explained_variance$explained_variance[
+                            1:components2show] * 100, digits = 2),
+                        "%\n", sep = ""))
+              cat(paste("\tMDS explained variance (only representatives): ",
+                        "\n", sep = ""))
+              components2show <- min(5, length(x@explained_variance_repr$component))
+              cat(paste("\t\tComponent ",
+                        x@explained_variance_repr$component[
+                            1:components2show],
+                        ": ",
+                        round(x@explained_variance_repr$explained_variance[
+                            1:components2show] * 100, digits = 2),
+                        "%\n", sep = ""))
+          })
+
