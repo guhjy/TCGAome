@@ -46,9 +46,6 @@ str(goa_bp, list.len = 5, vec.len = 5)
 ```
 
 
-**TODO: add a print function to annotations object**
-
-
 ### Distribution of annotations
 
 We can visually explore the distribution of annotations and explore the differences between genes and terms for the different resources.
@@ -64,7 +61,13 @@ plot_scatter(goa_bp)
 plot_violin(goa_bp)
 ```
 
-Comparing the different annotations we can observe that the three GO ontologies are the richest ... To be continued... 
+A summary on the annotations can be obtained with the print method:
+```{r, warning=FALSE, message=FALSE}
+print(goa_bp)
+```
+
+Comparing the different annotations we can observe that the three GO ontologies are the richest ... 
+**To be continued... **
 
 ```{r, warning=FALSE, message=FALSE, fig.width=7, fig.height=6}
 goa_bp_violin <- plot_violin(goa_bp) + ggplot2::guides(colour=FALSE)
@@ -90,6 +93,14 @@ hpo_scatter <- plot_scatter(hpo) + ggplot2::guides(colour=FALSE, shape=FALSE)
 cowplot::plot_grid(goa_bp_scatter, goa_mf_scatter, goa_cc_scatter, 
                    kegg_scatter, omim_scatter, hpo_scatter,
                    nrow = 2)
+```
+
+```{r, warning=FALSE}
+print(goa_mf)
+print(goa_cc)
+print(kegg)
+print(omim)
+print(hpo)
 ```
 
 ### Metrics

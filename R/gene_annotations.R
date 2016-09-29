@@ -259,15 +259,27 @@ setMethod("initialize",
               ## Removes entries with NA values
               .Object@raw_annotations <- raw_annotations[
                   !is.na(raw_annotations[, "Term"]) & !is.na(raw_annotations[, "Gene"]), ]
-              ## Sets slots
+              ## Sets name
               .Object@name <- name
+              ## Sets gene2term structure
               .Object@gene2term <- aggregate(data = .Object@raw_annotations,
-                            Term ~ Gene, c)
+                            Term ~ Gene, unique)
               rownames(.Object@gene2term) <- .Object@gene2term$Gene
+              # remove a gene if it is associated with all terms
+              #.Object@gene2term <- .Object@gene2term[
+              #    sapply(.Object@gene2term$Term, FUN = length) !=
+              #        length(.Object@term2gene$Term),]
+              ## Sets term2gene structure
               .Object@term2gene <- aggregate(data = .Object@raw_annotations,
-                            Gene ~ Term, c)
+                            Gene ~ Term, unique)
               rownames(.Object@term2gene) <- .Object@term2gene[, c("Term")]
-              .Object@max_term_annotations <- max(sapply(.Object@term2gene[, c("Gene")], length))
+              # remove a term if it is associated with all genes
+              #.Object@term2gene <- .Object@term2gene[
+              #sapply(.Object@term2gene$Gene, FUN = length) !=
+              #    length(.Object@gene2term$Gene),]
+              ## Sets max term annotations
+              .Object@max_term_annotations <- max(sapply(.Object@term2gene$Gene, length))
+              ## Sets supported similarity methods
               .Object@func_similarity_methods <- c("UI", "cosine", "bray-curtis", "binary")
 
               ## Checks object validity
@@ -836,4 +848,67 @@ setMethod("plot",
               plot1 <- TCGAome::plot_scatter(x)
               plot2 <- TCGAome::plot_violin(x)
               cowplot::plot_grid(plot1, plot2, nrow = 2)
+          })
+
+
+#' print()
+#'
+#' Prints the gene annotations
+#'
+#' @param x The GeneAnnotations class on which the method will run.
+
+#' @return The printed version of the object
+#'
+#' @export
+#'
+#' @examples
+#' TCGAome::print(hpo)
+setGeneric("print",
+           signature = c("x"),
+           function(x) standardGeneric("print"))
+
+#' @aliases print
+#' @export
+setMethod("print",
+          c("x" = "GeneAnnotations"),
+          function(x) {
+              cat(paste("'", x@name, "'", " object of class ", class(x), "\n", sep = ""))
+              cat(paste("Number of genes: ", length(x@gene2term$Gene), "\n"))
+              cat(paste("Number of terms: ", length(x@term2gene$Term), "\n"))
+              cat("Number of terms associated to a gene\n")
+
+              cat(paste("\tAverage: ",
+                        round(mean(sapply(x@gene2term$Term, FUN=length)),
+                              digits = 2),
+                        "\n"))
+              cat(paste("\tStandard deviation: ",
+                        round(sd(sapply(x@gene2term$Term, FUN=length)),
+                              digits = 2),
+                        "\n"))
+              cat(paste("\tQuantiles ",
+                        names(quantile(sapply(x@gene2term$Term, FUN=length))),
+                        ": ",
+                        quantile(sapply(x@gene2term$Term, FUN=length)),
+                        "\n"))
+              cat(paste("\tMaximum: ",
+                        max(sapply(x@gene2term$Term,
+                                   FUN=length)), "\n"))
+
+              cat("Number of genes associated to a term\n")
+              cat(paste("\tAverage: ",
+                        round(mean(sapply(x@term2gene$Gene, FUN=length)),
+                              digits = 2),
+                        "\n"))
+              cat(paste("\tStandard deviation: ",
+                        round(sd(sapply(x@term2gene$Gene, FUN=length)),
+                              digits = 2),
+                        "\n"))
+              cat(paste("\tQuantiles ",
+                        names(quantile(sapply(x@term2gene$Gene, FUN=length))),
+                        ": ",
+                        quantile(sapply(x@term2gene$Gene, FUN=length)),
+                        "\n"))
+              cat(paste("\tMaximum: ",
+                        max(sapply(x@term2gene$Gene,
+                                   FUN=length)), "\n"))
           })
